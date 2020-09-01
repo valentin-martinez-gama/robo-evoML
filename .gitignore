@@ -26,5 +26,8 @@ codegen/
 # Simulink autosave extension
 *.autosave
 
+*Simulink slx Simulation files - use mdl instead
+*.slx
+
 # Octave session info
 octave-workspace
