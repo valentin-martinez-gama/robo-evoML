@@ -28,6 +28,7 @@ codegen/
 
 *Simulink slx Simulation files - use mdl instead
 *.slx
+*.slxc
 
 # Octave session info
 octave-workspace
