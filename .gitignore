@@ -32,3 +32,6 @@ codegen/
 
 # Octave session info
 octave-workspace
+
+#virtualenv for python
+env/
