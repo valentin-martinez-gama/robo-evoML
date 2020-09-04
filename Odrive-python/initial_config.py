@@ -39,6 +39,7 @@ robo_drive.axiso.config.watchdog_timeout = watchdogTimeout
 robo_drive.axiso.config.watchdog_timeout = watchdogTimeout
 
 robo_drive.save_configuration()
+odrivetool backup-config initial_config.json
 robo_drive.reboot() #No se ve a necesitar con el siguiente firmware release
 
 
