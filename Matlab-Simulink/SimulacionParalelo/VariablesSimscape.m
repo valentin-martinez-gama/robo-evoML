@@ -1,6 +1,6 @@
 p    = 7;        % Number of pole pairs
-Rs   = 0.1;      % Stator resistance per phase           [Ohm]
-Ls   = 1e-4;     % Stator self-inductance per phase, Ls  [H]
+Rs   = 0.039;      % Stator resistance per phase           [Ohm]
+Ls   = 2.02e-5;     % Stator self-inductance per phase, Ls  [H]
 Ms   = 1e-5;     % Stator mutual inductance, Ms          [H]
 psim = 0.0175;   % Maximum permanent magnet flux linkage [Wb]
 Jm   = 0.0005;   % Rotor inertia                         [Kg*m^2]
