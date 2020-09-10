@@ -38,3 +38,5 @@ env/
 
 *.pyc
 __pycache__/
+
+devTests/

@@ -1,22 +1,23 @@
 import sys
 import time
+
 import odrive
 from odrive.enums import *
 from odrive.utils import dump_errors
 
+def checkError(odrv_axis, message):
+    if(odrv_axis.error != 0):
+        print(dump_errors(odrv_axis))
+        sys.exit(message)
+
+def waitForIdle(odrv_axis):
+    while odrv_axis.current_state != AXIS_STATE_IDLE:
+        time.sleep(0.1)
+    return
+
 def motor_encoder_inicial(odrv_axis):
 
-    def checkError(message):
-        if(odrv_axis.error != 0):
-            print(dump_errors(odrv_axis))
-            sys.exit(message)
-
-    def waitForIdle():
-        while odrv_axis.current_state != AXIS_STATE_IDLE:
-            time.sleep(0.1)
-        return
-
-    checkError("ERROR: error encontrado previo a inicilizar pre_calibracion.")
+    checkError(odrv_axis, "ERROR: error encontrado previo a inicilizar pre_calibracion.")
 
     #Calibracion del Motor
     if(odrv_axis.motor.config.pre_calibrated):
@@ -28,8 +29,8 @@ def motor_encoder_inicial(odrv_axis):
         print("Ejecutando AXIS_STATE_MOTOR_CALIBRATION")
         odrv_axis.requested_state = AXIS_STATE_MOTOR_CALIBRATION
 
-        waitForIdle()
-        checkError("ERROR: en AXIS_STATE_MOTOR_CALIBRATION")
+        waitForIdle(odrv_axis)
+        checkError(odrv_axis,"ERROR: en AXIS_STATE_MOTOR_CALIBRATION")
 
         if(odrv_axis.motor.is_calibrated):
             odrv_axis.motor.config.pre_calibrated = True
@@ -51,16 +52,16 @@ def motor_encoder_inicial(odrv_axis):
         odrv_axis.encoder.config.use_index = True
         print("Buscando index AXIS_STATE_ENCODER_INDEX_SEARCH")
         odrv_axis.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
-        waitForIdle()
-        checkError("ERROR: en AXIS_STATE_ENCODER_INDEX_SEARCH")
+        waitForIdle(odrv_axis)
+        checkError(odrv_axis,"ERROR: en AXIS_STATE_ENCODER_INDEX_SEARCH")
 
         print("Index encontrado")
         time.sleep(.5)
 
         print("Ejecutando AXIS_STATE_ENCODER_OFFSET_CALIBRATION")
         odrv_axis.requested_state = AXIS_STATE_ENCODER_OFFSET_CALIBRATION
-        waitForIdle()
-        checkError("ERROR: en AXIS_STATE_ENCODER_OFFSET_CALIBRATION")
+        waitForIdle(odrv_axis)
+        checkError(odrv_axis,"ERROR: en AXIS_STATE_ENCODER_OFFSET_CALIBRATION")
 
         if(odrv_axis.encoder.is_ready):
             odrv_axis.encoder.config.pre_calibrated = True
@@ -75,8 +76,26 @@ def motor_encoder_inicial(odrv_axis):
         #test si una variable puede ocupar el lugar de axis
     return "DONE calibracion_motor_encoder"
 
-"""
-A partir de ahora correr
-requested_State = AXIS_STATE_STARTUP_SEQUENCE
-para cada iniciacion
-"""
+    """
+    A partir de ahora correr
+    requested_State = AXIS_STATE_STARTUP_SEQUENCE
+    para cada iniciacion
+    """
+
+def test_posicion(odrv_axis, gradosSequencia, odrv = 0):
+
+    checkError(odrv_axis,"ERROR antes de inicilizar test_posicion")
+    opcion = "n"
+    while opcion == ("y" or "n"):
+
+        odrv_axis.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
+        odrv_axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+
+        opcion = input("Quieres hacer sequencia de movimiento de prueba? y / exit")
+    #Probar en que type se almacena el input
+        if opcion == "y":
+            odrv_axis.controller.pos_setpoint = gradosSequencia/360*8192
+            time.sleep(1.2)
+            odrv_axis.controller.pos_setpoint = 0
+
+    return odrv_axis.requested_state = AXIS_STATE_IDLE
