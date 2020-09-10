@@ -31,7 +31,7 @@ def corrientes(odrv, limiteCorriente = 10, calibracion = 10):
         print("Reiniciando para fijar corriente MOSFET >60")
         return odrv.reboot()
     return"Nuevas corrientes fijadas exitosamente"
-    
-def limite_velocidad(odrv, limvel = encoderCPR):
+
+def limite_velocidad(odrv, limiteVelocidad = encoderCPR):
     odrv.axis0.controller.config.vel_limit = limiteVelocidad
     odrv.axis1.controller.config.vel_limit = limiteVelocidad
