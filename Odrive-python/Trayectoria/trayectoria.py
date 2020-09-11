@@ -1,33 +1,43 @@
+from sympy.plotting import plot
 from sympy import *
+import numpy
 
-def trayectoria(tiempo, parametros,T):
+def trayectoria(tiempo, parametros, T = .01):
+
     matrixSize = len(parametros)
-    t = Symbol('t')
+    tfin = Symbol('tfin')
     A =zeros(matrixSize, matrixSize)
+
     A[0,0] = 1
     for p in range(0, matrixSize):
-        A[1,p] = t**p
+        A[1,p] = tfin**p
     for d in range(3, matrixSize, 2):
         for c in range(0,matrixSize):
-            A[d,c] = diff(A[1,c], t, round((d-1)/2))
+            A[d,c] = diff(A[1,c], tfin, round((d-1)/2))
     for f in range(2, matrixSize, 2):
         A[f,f-1] = factorial(f/2)
 
     numA =zeros(matrixSize, matrixSize);
-
     for i in range(0,matrixSize):
         for j in range(0,matrixSize):
-            numA[i,j] = A[i,j].subs(t, tiempo)
+            numA[i,j] = A[i,j].subs(tfin, tiempo)
 
     params = Matrix(parametros)
-    c0 = 33
-    c1 = 33
-    solve_linear_system(numA.col_insert(matrixSize, params), c0,c1)
-    print(c0)
-    print(c1)
-    print(A.shape)
-    print(params.shape)
-    return numA
+    coefs = symbols('a0:%d'%matrixSize)
+    sols  = solve_linear_system(numA.col_insert(matrixSize, params), *coefs)
 
-B = trayectoria(10,[0,pi/2,0,0,0,0],1)
-print(B)
+    polinomio = 0
+    t = Symbol('t')
+    for c in range(0, matrixSize):
+        polinomio += sols[coefs[c]]*t**c
+
+    setpointsArray = []
+    #plot(polinomio, xlim=(-.1*tiempo, 1.1*tiempo), ylim=(-pi,pi))
+    setpoint = lambdify(t, polinomio, "numpy")
+    for n in range(0,round(tiempo/T)):
+        setpointsArray.append(setpoint(n*T))
+
+    return setpointsArray
+
+
+B = trayectoria(3, [0,pi/2,0,-pi/4,0,0] , .01)

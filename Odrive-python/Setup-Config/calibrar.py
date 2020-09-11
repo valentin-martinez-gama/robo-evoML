@@ -73,7 +73,22 @@ def motor_encoder_inicial(odrv_axis):
         else: return "WARNING .encoder.is_ready = False"
 
     print("Calibracion del Encoder OK")
-        #test si una variable puede ocupar el lugar de axis
+
+    print("Pruebas en funcionamiento")
+    odrv_axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    odrv_axis.controller.set_vel_setpoint(4000,0)
+    time.sleep(3.5)
+    odrv_axis.requested_state = AXIS_STATE_IDLE
+
+    if(odrv_axis.error != 0):
+        odrv_axis.encoder.config.pre_calibrated = False
+        odrv_axis.config.startup_encoder_index_search = False
+        odrv_axis.motor.config.pre_calibrated = False
+        save_configuration()
+    checkError(odrv_axis, "ERROR: en pruebas de set_vel_setpoint")
+
+
+
     return "DONE calibracion_motor_encoder"
 
     """
