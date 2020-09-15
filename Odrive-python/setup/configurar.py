@@ -1,11 +1,18 @@
 import sys
 import odrive
 from odrive.enums import *
+from odrive.configuration import backup_config
 
 #odrv.axiso.config.watchdog_timeout = watchdogTimeout
 breakResistance = .5
 polePairs = 8
 encoderCPR = 8192
+
+def export_config(odrv, jsonName = "roboBase.json"):
+    logging.basicConfig(file="roboLogs.log",format='%(levelname)s:%(asctime)s:%(message)s',level=logging.DEBUG)
+    theLog = logging.getLogger(__name__)
+    backup_config(odrv, jsonName, theLog)
+
 
 def hardware(odrv):
     odrv.config.brake_resistance = breakResistance

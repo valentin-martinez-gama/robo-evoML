@@ -1,6 +1,6 @@
-from sympy.plotting import plot
+#from sympy.plotting import plot
 from sympy import *
-import numpy
+from math import ceil
 
 def trayectoria(tiempo, parametros, T = .01):
 
@@ -31,13 +31,14 @@ def trayectoria(tiempo, parametros, T = .01):
     for c in range(0, matrixSize):
         polinomio += sols[coefs[c]]*t**c
 
+    plot(polinomio, xlim=(-.1*tiempo, 1.1*tiempo), ylim=(-pi,pi))
+
     setpointsArray = []
-    #plot(polinomio, xlim=(-.1*tiempo, 1.1*tiempo), ylim=(-pi,pi))
     setpoint = lambdify(t, polinomio, "numpy")
-    for n in range(0,round(tiempo/T)):
+    for n in range(0,ceil(tiempo/T)):
         setpointsArray.append(setpoint(n*T))
 
     return setpointsArray
 
-
-B = trayectoria(3, [0,pi/2,0,-pi/4,0,0] , .01)
+if(__name__ == '__main__'):
+    print(trayectoria(3, [0,pi/2,0,-pi/4,0,0] , .01))
