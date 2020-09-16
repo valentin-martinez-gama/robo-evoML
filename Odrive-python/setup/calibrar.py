@@ -32,13 +32,13 @@ def motor_encoder_inicial(odrv_axis):
 
         wait_for_idle(odrv_axis)
         check_error(odrv_axis,"ERROR: en AXIS_STATE_MOTOR_CALIBRATION")
-
         if(odrv_axis.motor.is_calibrated):
             odrv_axis.motor.config.pre_calibrated = True
-            odrv_axis.save_configuration()
+
             print("Motor calibrado exitosamente con phase_resistance y phase_inductance de:")
             print(odrv_axis.motor.config.phase_resistance)
             print(odrv_axis.motor.config.phase_inductance)
+            print("Flag D1")
         else: return "WARNING .motor.is_calibrated = False"
 
     print("Calibracion del motor OK")
@@ -46,8 +46,8 @@ def motor_encoder_inicial(odrv_axis):
 
     #Calibracion del encoder
     if(odrv_axis.encoder.config.pre_calibrated):
-        print("Encoder ya precalibrado con direccion:")
-        print(odrv_axis.config.direction)
+        print("Encoder ya precalibrado con offset:")
+        print(odrv_axis.encoder.config.offset)
 
     else:
         odrv_axis.encoder.config.use_index = True
@@ -67,10 +67,9 @@ def motor_encoder_inicial(odrv_axis):
         if(odrv_axis.encoder.is_ready):
             odrv_axis.encoder.config.pre_calibrated = True
             odrv_axis.config.startup_encoder_index_search = True
-            odrv_axis.save_configuration()
-            print("Encoder calibrado exitosamente con offset y direccion de:")
-            print(odrv_axis.config.offset)
-            print(odrv_axis.config.direction)
+
+            print("Encoder calibrado exitosamente con offset")
+            print(odrv_axis.encoder.config.offset)
         else: return "WARNING .encoder.is_ready = False"
 
     print("Calibracion del Encoder OK")
@@ -85,7 +84,6 @@ def motor_encoder_inicial(odrv_axis):
         odrv_axis.encoder.config.pre_calibrated = False
         odrv_axis.config.startup_encoder_index_search = False
         odrv_axis.motor.config.pre_calibrated = False
-        save_configuration()
     check_error(odrv_axis, "ERROR: en pruebas de set_vel_setpoint")
 
     return "DONE calibracion_motor_encoder"
@@ -95,6 +93,9 @@ def motor_encoder_inicial(odrv_axis):
     requested_State = AXIS_STATE_STARTUP_SEQUENCE
     para cada iniciacion
     """
+
+def inicio_closed_loop(odrv_axis):
+
 
 def test_posicion(odrv_axis, gradosSequencia = 30, odrv = 0):
 

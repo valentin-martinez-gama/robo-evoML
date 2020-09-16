@@ -5,7 +5,7 @@ from odrive.configuration import backup_config
 
 #odrv.axiso.config.watchdog_timeout = watchdogTimeout
 breakResistance = .5
-polePairs = 8
+polePairs = 7
 encoderCPR = 8192
 
 def export_config(odrv, jsonName = "roboBase.json"):
@@ -24,7 +24,7 @@ def hardware(odrv):
     odrv.axis1.motor.config.motor_type = MOTOR_TYPE_HIGH_CURRENT
     return "DONE hardware"
 
-def corrientes(odrv, limiteCorriente = 10, calibracion = 10):
+def corrientes(odrv, limiteCorriente = 20, calibracion = 15):
     odrv.axis0.motor.config.calibration_current = calibracion
     odrv.axis1.motor.config.calibration_current = calibracion
 
@@ -39,6 +39,6 @@ def corrientes(odrv, limiteCorriente = 10, calibracion = 10):
         return odrv.reboot()
     return"Nuevas corrientes fijadas exitosamente"
 
-def limite_velocidad(odrv, limiteVelocidad = encoderCPR):
+def limite_velocidad(odrv, limiteVelocidad = encoderCPR*8):
     odrv.axis0.controller.config.vel_limit = limiteVelocidad
     odrv.axis1.controller.config.vel_limit = limiteVelocidad
