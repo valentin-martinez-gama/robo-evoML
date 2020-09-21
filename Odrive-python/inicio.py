@@ -26,7 +26,7 @@ def inicilizar(odrv):
     odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
     odrv.axis0.controller.config.control_mode = 3
-    odrv.axis0.controller.config.control_mode = 3
+    odrv.axis1.controller.config.control_mode = 3
 
     odrv.axis0.controller.pos_setpoint = 0
     odrv.axis1.controller.pos_setpoint = 0
@@ -36,5 +36,7 @@ def inicilizar(odrv):
     time.sleep(.7)
     odrv.axis0.controller.pos_setpoint = 0
     odrv.axis1.controller.pos_setpoint = 0
+
+    configurar.export_config(odrv, "roboInicial.json")
 
     return "DONE incilizacion - Estado Actual - Control Pos 0"

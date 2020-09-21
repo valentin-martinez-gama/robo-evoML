@@ -2,6 +2,7 @@ import sys
 import odrive
 from odrive.enums import *
 from odrive.configuration import backup_config
+import logging
 
 #odrv.axiso.config.watchdog_timeout = watchdogTimeout
 breakResistance = .5
@@ -9,7 +10,7 @@ polePairs = 7
 encoderCPR = 8192
 
 def export_config(odrv, jsonName = "roboBase.json"):
-    logging.basicConfig(file="roboLogs.log",format='%(levelname)s:%(asctime)s:%(message)s',level=logging.DEBUG)
+    #logging.basicConfig(file="roboLogs.log",format='%(levelname)s:%(asctime)s:%(message)s',level=logging.DEBUG)
     theLog = logging.getLogger(__name__)
     backup_config(odrv, jsonName, theLog)
 
@@ -39,6 +40,13 @@ def corrientes(odrv, limiteCorriente = 20, calibracion = 15):
         return odrv.reboot()
     return"Nuevas corrientes fijadas exitosamente"
 
-def limite_velocidad(odrv, limiteVelocidad = encoderCPR*8):
+def ganancias(odrv, gan_pos=20, gan_vel= 1.5/10000.0, gan_int_vel = 10.0/10000.0):
+    odrv.axis0.controller.config.pos_gain = gan_pos #[(counts/s) / counts]
+    odrv.axis0.controller.config.vel_gain = gan_vel #[A/(counts/s)]
+    odrv.axis0.controller.config.vel_integrator_gain = gan_int_vel #[A/((counts/s) * s)]
+    return "Nuevas ganancias fijadas"
+
+def limite_velocidad(odrv, limiteVelocidad = encoderCPR*12):
     odrv.axis0.controller.config.vel_limit = limiteVelocidad
     odrv.axis1.controller.config.vel_limit = limiteVelocidad
+    return "Nuevas velocidades limites fijadas"

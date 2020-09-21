@@ -94,8 +94,8 @@ def motor_encoder_inicial(odrv_axis):
     para cada iniciacion
     """
 
-def inicio_closed_loop(odrv_axis):
-
+def set_encoder_zero(odrv, axis0_offset=615, axis1_offset=420):
+    
 
 def test_posicion(odrv_axis, gradosSequencia = 30, odrv = 0):
 
