@@ -25,7 +25,7 @@ def hardware(odrv):
     odrv.axis1.motor.config.motor_type = MOTOR_TYPE_HIGH_CURRENT
     return "DONE hardware"
 
-def corrientes(odrv, limiteCorriente = 20, calibracion = 15):
+def currents(odrv, limiteCorriente = 20, calibracion = 15):
     odrv.axis0.motor.config.calibration_current = calibracion
     odrv.axis1.motor.config.calibration_current = calibracion
 
@@ -36,17 +36,17 @@ def corrientes(odrv, limiteCorriente = 20, calibracion = 15):
         odrv.axis0.motor.config.request_current_range = limiteCorriente
         odrv.axis1.motor.config.request_current_range = limiteCorriente
         odrv.save_configuration()
-        print("Reiniciando para fijar corriente MOSFET >60")
+        print("Rebooting to set MOSFET currents >60")
         return odrv.reboot()
-    return"Nuevas corrientes fijadas exitosamente"
+    return"New current limits set"
 
-def ganancias(odrv, gan_pos=20, gan_vel= 1.5/10000.0, gan_int_vel = 10.0/10000.0):
+def gains(odrv, gan_pos=20, gan_vel= 1.5/10000.0, gan_int_vel = 10.0/10000.0):
     odrv.axis0.controller.config.pos_gain = gan_pos #[(counts/s) / counts]
     odrv.axis0.controller.config.vel_gain = gan_vel #[A/(counts/s)]
     odrv.axis0.controller.config.vel_integrator_gain = gan_int_vel #[A/((counts/s) * s)]
-    return "Nuevas ganancias fijadas"
+    return "New gains set"
 
-def limite_velocidad(odrv, limiteVelocidad = encoderCPR*12):
+def velocity_limit(odrv, limiteVelocidad = encoderCPR*12):
     odrv.axis0.controller.config.vel_limit = limiteVelocidad
     odrv.axis1.controller.config.vel_limit = limiteVelocidad
-    return "Nuevas velocidades limites fijadas"
+    return "Nuevas velocity limits set"

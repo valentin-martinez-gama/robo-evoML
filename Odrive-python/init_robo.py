@@ -3,19 +3,20 @@ import time
 import odrive
 from odrive.enums import *
 
-from setup import calibrar
-from setup import configurar
+from setup import calibrate
+from setup import configure
 
-def inicilizar(odrv):
+def initialize(odrv):
 
-    configurar.hardware(odrv)
-    configurar.corrientes(odrv)
-    configurar.limite_velocidad(odrv)
+    configure.hardware(odrv)
+    configure.currents(odrv)
+    configure.velocity_limit(odrv)
+    configure.gains(odrv)
     time.sleep(.5)
 
-    calibrar.motor_encoder_inicial(odrv.axis0)
+    calibrate.motor_encoder_initial(odrv.axis0)
     time.sleep(1)
-    calibrar.motor_encoder_inicial(odrv.axis1)
+    calibrate.motor_encoder_initial(odrv.axis1)
     time.sleep(1)
 
     odrv.axis0.requested_state = AXIS_STATE_STARTUP_SEQUENCE
@@ -30,13 +31,13 @@ def inicilizar(odrv):
 
     odrv.axis0.controller.pos_setpoint = 0
     odrv.axis1.controller.pos_setpoint = 0
-    time.sleep(.3)
+    time.sleep(.4)
     odrv.axis0.controller.pos_setpoint = 2000
     odrv.axis1.controller.pos_setpoint = 2000
-    time.sleep(.7)
+    time.sleep(.6)
     odrv.axis0.controller.pos_setpoint = 0
     odrv.axis1.controller.pos_setpoint = 0
 
-    configurar.export_config(odrv, "roboInicial.json")
+    configure.export_config(odrv, "roboInicial.json")
 
-    return "DONE incilizacion - Estado Actual - Control Pos 0"
+    return "DONE with initalization - Current State - Control Pos 0"

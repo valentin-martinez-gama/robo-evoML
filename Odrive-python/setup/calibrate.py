@@ -11,70 +11,65 @@ def check_error(odrv_axis, message):
         print(dump_errors(odrv_axis))
         sys.exit(message)
 
+
 def wait_for_idle(odrv_axis):
     while odrv_axis.current_state != AXIS_STATE_IDLE:
         time.sleep(0.1)
     return
 
-def motor_encoder_inicial(odrv_axis):
 
-    check_error(odrv_axis, "ERROR: error encontrado previo a inicilizar pre_calibracion.")
+def motor_encoder_initial(odrv_axis):
 
-    #Calibracion del Motor
+    check_error(odrv_axis, "ERROR: error found before starting initial calibration.")
+
+    # Motor Calibration
     if(odrv_axis.motor.config.pre_calibrated):
-        print("Este motor ya esta precalibrado con phase_resistance y phase_inductance de:")
-        print(odrv_axis.motor.config.phase_resistance)
-        print(odrv_axis.motor.config.phase_inductance)
+        print("This motor is precalibrated with phase_resistance = " + str(odrv_axis.motor.config.phase_resistance) + " and phase_inductance = " + str(odrv_axis.motor.config.phase_inductance))
 
     else:
-        print("Ejecutando AXIS_STATE_MOTOR_CALIBRATION")
+        print("Executing AXIS_STATE_MOTOR_CALIBRATION")
         odrv_axis.requested_state = AXIS_STATE_MOTOR_CALIBRATION
 
         wait_for_idle(odrv_axis)
-        check_error(odrv_axis,"ERROR: en AXIS_STATE_MOTOR_CALIBRATION")
+        check_error(odrv_axis,"ERROR: in AXIS_STATE_MOTOR_CALIBRATION")
+
         if(odrv_axis.motor.is_calibrated):
             odrv_axis.motor.config.pre_calibrated = True
+            print("Motor calibrated succesfully with phase_resistance= " + str(odrv_axis.motor.config.phase_resistance) + " and phase_inductance = " + str(odrv_axis.motor.config.phase_inductance))
+        else: return "WARNING .motor.is_calibrated = False."
 
-            print("Motor calibrado exitosamente con phase_resistance y phase_inductance de:")
-            print(odrv_axis.motor.config.phase_resistance)
-            print(odrv_axis.motor.config.phase_inductance)
-            print("Flag D1")
-        else: return "WARNING .motor.is_calibrated = False"
-
-    print("Calibracion del motor OK")
+    print("Motor calibration OK")
 
 
-    #Calibracion del encoder
+    # Encoder Calibration
     if(odrv_axis.encoder.config.pre_calibrated):
-        print("Encoder ya precalibrado con offset:")
-        print(odrv_axis.encoder.config.offset)
+        print("Precalibrated encoder with offset = " + str(odrv_axis.encoder.config.offset))
 
     else:
         odrv_axis.encoder.config.use_index = True
-        print("Buscando index AXIS_STATE_ENCODER_INDEX_SEARCH")
+        print("Searching for index AXIS_STATE_ENCODER_INDEX_SEARCH")
         odrv_axis.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
         wait_for_idle(odrv_axis)
-        check_error(odrv_axis,"ERROR: en AXIS_STATE_ENCODER_INDEX_SEARCH")
+        check_error(odrv_axis,"ERROR: in AXIS_STATE_ENCODER_INDEX_SEARCH")
 
-        print("Index encontrado")
+        print("Index found")
         time.sleep(.5)
 
-        print("Ejecutando AXIS_STATE_ENCODER_OFFSET_CALIBRATION")
+        print("Executing AXIS_STATE_ENCODER_OFFSET_CALIBRATION")
         odrv_axis.requested_state = AXIS_STATE_ENCODER_OFFSET_CALIBRATION
         wait_for_idle(odrv_axis)
-        check_error(odrv_axis,"ERROR: en AXIS_STATE_ENCODER_OFFSET_CALIBRATION")
+        check_error(odrv_axis,"ERROR: in AXIS_STATE_ENCODER_OFFSET_CALIBRATION")
 
         if(odrv_axis.encoder.is_ready):
             odrv_axis.encoder.config.pre_calibrated = True
             odrv_axis.config.startup_encoder_index_search = True
 
-            print("Encoder calibrado exitosamente con offset")
-            print(odrv_axis.encoder.config.offset)
+            print("Succesfullt calibrated encoder with offset = " + str(odrv_axis.encoder.config.offset))
         else: return "WARNING .encoder.is_ready = False"
 
-    print("Calibracion del Encoder OK")
+    print("Encoder calibration OK")
 
-    print("Pruebas en funcionamiento")
+    print("Movment test ...")
     odrv_axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     odrv_axis.controller.set_vel_setpoint(4000,0)
     time.sleep(3.5)
@@ -84,22 +79,24 @@ def motor_encoder_inicial(odrv_axis):
         odrv_axis.encoder.config.pre_calibrated = False
         odrv_axis.config.startup_encoder_index_search = False
         odrv_axis.motor.config.pre_calibrated = False
-    check_error(odrv_axis, "ERROR: en pruebas de set_vel_setpoint")
+    check_error(odrv_axis, "ERROR: after running set_vel_setpoint and turning the motor")
 
-    return "DONE calibracion_motor_encoder"
+    return "DONE motor_encoder_initial calibration"
 
     """
-    A partir de ahora correr
+    From now on it os only needed to run
     requested_State = AXIS_STATE_STARTUP_SEQUENCE
-    para cada iniciacion
+    to start using the motor
     """
+
 
 def set_encoder_zero(odrv, axis0_offset=615, axis1_offset=420):
-    
+    return
 
-def test_posicion(odrv_axis, gradosSequencia = 30, odrv = 0):
 
-    check_error(odrv_axis,"ERROR antes de inicilizar test_posicion")
+def test_position(odrv_axis, degreesMovment=30, odrv=0):
+
+    check_error(odrv_axis,"ERROR before starting test_posicion")
     opcion = "n"
     while opcion == ("y" or "n"):
 
@@ -107,12 +104,11 @@ def test_posicion(odrv_axis, gradosSequencia = 30, odrv = 0):
         odrv_axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
         opcion = input("Quieres hacer sequencia de movimiento de prueba? y / exit")
-    #Probar en que type se almacena el input
         if opcion == "y":
-            odrv_axis.controller.pos_setpoint = gradosSequencia/360*8192
-            time.sleep(1.2)
+            odrv_axis.controller.pos_setpoint = degreesMovment/360 * odrv_axis.encoder.config.cpr
+            time.sleep(1)
             odrv_axis.controller.pos_setpoint = 0
+            time.sleep(1)
 
     odrv_axis.requested_state = AXIS_STATE_IDLE
-
-    return
+    return "DONE test_position"
