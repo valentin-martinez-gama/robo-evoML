@@ -90,8 +90,25 @@ def motor_encoder_initial(odrv_axis):
     """
 
 
-def set_encoder_zero(odrv, axis0_offset=615, axis1_offset=420):
-    return
+def set_encoder_zero(odrv, axis0_offset=420, axis1_offset=730):
+    odrv.axis0.requested_state = AXIS_STATE_STARTUP_SEQUENCE
+    odrv.axis1.requested_state = AXIS_STATE_STARTUP_SEQUENCE
+    time.sleep(.5)
+
+    odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    odrv.axis0.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
+    odrv.axis1.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
+    odrv.axis0.controller.pos_setpoint = axis0_offset
+    odrv.axis1.controller.pos_setpoint = axis1_offset
+    time.sleep(.5)
+    odrv.axis0.encoder.set_linear_count = 0
+    odrv.axis1.encoder.set_linear_count = 0
+    time.sleep(.5)
+    odrv.axis0.controller.pos_setpoint = 0
+    odrv.axis1.controller.pos_setpoint = 0
+
+    return "DONE set encoder zero"
 
 
 def test_position(odrv_axis, degreesMovment=30, odrv=0):

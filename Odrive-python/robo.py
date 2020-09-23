@@ -28,8 +28,8 @@ def initialize(odrv):
     odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
-    odrv.axis0.controller.config.control_mode = 3
-    odrv.axis1.controller.config.control_mode = 3
+    odrv.axis0.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
+    odrv.axis1.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
 
     odrv.axis0.controller.pos_setpoint = 0
     odrv.axis1.controller.pos_setpoint = 0
@@ -44,7 +44,7 @@ def initialize(odrv):
 
     return "DONE with initalization - Current State - Control Pos 0"
 
-    
+
 def loop_trayectory(odrv, pos1=0, pos2=pi, t1=.3, t2=.4):
 
     odrv.axis0.requested_state = AXIS_STATE_STARTUP_SEQUENCE
