@@ -7,6 +7,7 @@ from odrive.enums import *
 from control.trayectory import *
 from setup import calibrate
 from setup import configure
+from setup.calibrate import wait_for_idle
 
 def initialize(odrv):
 
@@ -16,18 +17,21 @@ def initialize(odrv):
     configure.gains(odrv)
     time.sleep(.5)
 
-    calibrate.motor_encoder_initial(odrv.axis0)
-    time.sleep(1)
-    calibrate.motor_encoder_initial(odrv.axis1)
-    time.sleep(1)
+    odrv.axis0.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
+    odrv.axis1.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
+    wait_for_idle(odrv.axis0)
+    wait_for_idle(odrv.axis1)
 
-    odrv.axis0.requested_state = AXIS_STATE_STARTUP_SEQUENCE
-    odrv.axis1.requested_state = AXIS_STATE_STARTUP_SEQUENCE
-    time.sleep(.3)
+    calibrate.motor_encoder_initial(odrv.axis0)
+    time.sleep(2)
+    calibrate.motor_encoder_initial(odrv.axis1)
+    time.sleep(2)
+
+    calibrate.set_encoder_zero(odrv)
+    time.sleep(.5)
 
     odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-
     odrv.axis0.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
     odrv.axis1.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
 
@@ -80,7 +84,7 @@ def loop_trayectory(odrv, pos1=0, pos2=pi, t1=.3, t2=.4):
         print("EXIT loop_trayectoria")
     return
 
-def loop_two_setpoints(odrv, pos1=420, pos2=4000, t=.3):
+def loop_two_setpoints(odrv, pos1=0, pos2=4000, t=.3):
     odrv.axis0.requested_state = AXIS_STATE_STARTUP_SEQUENCE
     odrv.axis1.requested_state = AXIS_STATE_STARTUP_SEQUENCE
     odrv.axis0.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL

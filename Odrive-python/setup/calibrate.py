@@ -71,8 +71,8 @@ def motor_encoder_initial(odrv_axis):
 
     print("Movment test ...")
     odrv_axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv_axis.controller.set_vel_setpoint(4000,0)
-    time.sleep(3.5)
+    odrv_axis.controller.move_to_pos(3000)
+    time.sleep(1)
     odrv_axis.requested_state = AXIS_STATE_IDLE
 
     if(odrv_axis.error != 0):
@@ -81,7 +81,7 @@ def motor_encoder_initial(odrv_axis):
         odrv_axis.motor.config.pre_calibrated = False
     check_error(odrv_axis, "ERROR: after running set_vel_setpoint and turning the motor")
 
-    return "DONE motor_encoder_initial calibration"
+    return print("DONE motor_encoder_initial calibration")
 
     """
     From now on it os only needed to run
@@ -90,10 +90,12 @@ def motor_encoder_initial(odrv_axis):
     """
 
 
-def set_encoder_zero(odrv, axis0_offset=420, axis1_offset=730):
-    odrv.axis0.requested_state = AXIS_STATE_STARTUP_SEQUENCE
-    odrv.axis1.requested_state = AXIS_STATE_STARTUP_SEQUENCE
-    time.sleep(.5)
+def set_encoder_zero(odrv, axis0_offset=460, axis1_offset=690):
+
+    odrv.axis0.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
+    odrv.axis1.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
+    wait_for_idle(odrv.axis0)
+    wait_for_idle(odrv.axis1)
 
     odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
@@ -102,12 +104,11 @@ def set_encoder_zero(odrv, axis0_offset=420, axis1_offset=730):
     odrv.axis0.controller.pos_setpoint = axis0_offset
     odrv.axis1.controller.pos_setpoint = axis1_offset
     time.sleep(.5)
-    odrv.axis0.encoder.set_linear_count = 0
-    odrv.axis1.encoder.set_linear_count = 0
+    odrv.axis0.encoder.set_linear_count(0)
+    odrv.axis1.encoder.set_linear_count(0)
     time.sleep(.5)
     odrv.axis0.controller.pos_setpoint = 0
     odrv.axis1.controller.pos_setpoint = 0
-
     return "DONE set encoder zero"
 
 

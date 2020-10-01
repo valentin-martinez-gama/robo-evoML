@@ -25,7 +25,7 @@ def hardware(odrv):
     odrv.axis1.motor.config.motor_type = MOTOR_TYPE_HIGH_CURRENT
     return "DONE hardware"
 
-def currents(odrv, limiteCorriente = 20, calibracion = 15):
+def currents(odrv, limiteCorriente = 20, calibracion = 10):
     odrv.axis0.motor.config.calibration_current = calibracion
     odrv.axis1.motor.config.calibration_current = calibracion
 
