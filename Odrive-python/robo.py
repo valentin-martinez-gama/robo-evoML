@@ -45,6 +45,7 @@ def initialize(odrv):
     odrv.axis1.controller.pos_setpoint = 0
 
     configure.export_config(odrv, "roboInicial.json")
+    odrv.save_configuration()
 
     return "DONE with initalization - Current State - Control Pos 0"
 

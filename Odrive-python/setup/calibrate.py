@@ -62,9 +62,7 @@ def motor_encoder_initial(odrv_axis):
 
         if(odrv_axis.encoder.is_ready):
             odrv_axis.encoder.config.pre_calibrated = True
-            odrv_axis.config.startup_encoder_index_search = True
-
-            print("Succesfullt calibrated encoder with offset = " + str(odrv_axis.encoder.config.offset))
+            print("Succesfully calibrated encoder with offset = " + str(odrv_axis.encoder.config.offset))
         else: return "WARNING .encoder.is_ready = False"
 
     print("Encoder calibration OK")
@@ -79,6 +77,9 @@ def motor_encoder_initial(odrv_axis):
         odrv_axis.encoder.config.pre_calibrated = False
         odrv_axis.config.startup_encoder_index_search = False
         odrv_axis.motor.config.pre_calibrated = False
+    else:
+        odrv_axis.config.startup_encoder_index_search = True
+        odrv_axis.config.startup_closed_loop_control = True
     check_error(odrv_axis, "ERROR: after running set_vel_setpoint and turning the motor")
 
     return print("DONE motor_encoder_initial calibration")
