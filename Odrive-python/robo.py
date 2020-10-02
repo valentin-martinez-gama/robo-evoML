@@ -11,16 +11,8 @@ from setup.calibrate import wait_for_idle
 
 def start(odrv):
 
-    odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv.axis0.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
-    odrv.axis1.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
-    odrv.axis0.controller.pos_setpoint = -1000
-    odrv.axis1.controller.pos_setpoint = -1000
-
-
-    if (odrv.axis0.error or odrv.axis1.error):
-        print("Odrive not calibrated - proceeding to calibration based on index search")
+    if (odrv.axis0.encoder.config.pre_calibrated and odrv.axis1.encoder.config.pre_calibrated) != 1:
+        print("System not calibrated - proceeding to calibration based on index search")
         dump_errors(odrv, True)
         first_time_calibration(odrv)
 
@@ -50,7 +42,7 @@ def full_calibration(odrv):
     configure.export_config(odrv, "roboInicial.json")
     odrv.save_configuration()
 
-    return "DONE with initalization - Current State - Control Pos 0"
+    return "DONE with initalization - Current State - Control Pos 3000"
 
 
 def loop_trayectory(odrv, pos1=0, pos2=pi, t1=.3, t2=.4):

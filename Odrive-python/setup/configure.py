@@ -50,3 +50,7 @@ def velocity_limit(odrv, limiteVelocidad = encoderCPR*12):
     odrv.axis0.controller.config.vel_limit = limiteVelocidad
     odrv.axis1.controller.config.vel_limit = limiteVelocidad
     return "Nuevas velocity limits set"
+
+def set_startup_procedure(odrv_axis, index_search = False, closed_control = False):
+    odrv_axis.config.startup_encoder_index_search = index_search
+    odrv_axis.config.startup_closed_loop_control = closed_control

@@ -5,6 +5,8 @@ import odrive
 from odrive.enums import *
 from odrive.utils import dump_errors
 
+from configure import set_startup_procedure
+
 
 def check_error(odrv_axis, message):
     if(odrv_axis.error != 0):
@@ -70,7 +72,7 @@ def motor_encoder_initial(odrv_axis):
     print("Movment test ...")
     odrv_axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     odrv_axis.controller.move_to_pos(3000)
-    time.sleep(.5)
+    time.sleep(.8)
     odrv_axis.requested_state = AXIS_STATE_IDLE
 
     if(odrv_axis.error != 0):
@@ -78,8 +80,8 @@ def motor_encoder_initial(odrv_axis):
         odrv_axis.config.startup_encoder_index_search = False
         odrv_axis.motor.config.pre_calibrated = False
     else:
-        odrv_axis.config.startup_encoder_index_search = True
-        odrv_axis.config.startup_closed_loop_control = True
+        set_startup_procedure(odrv_axis)
+
     check_error(odrv_axis, "ERROR: after running set_vel_setpoint and turning the motor")
 
     return print("DONE motor_encoder_initial calibration")
@@ -98,10 +100,10 @@ def set_encoder_zero(odrv, axis0_offset=460, axis1_offset=690):
     odrv.axis1.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
     odrv.axis0.controller.pos_setpoint = axis0_offset
     odrv.axis1.controller.pos_setpoint = axis1_offset
-    time.sleep(.5)
+    time.sleep(.6)
     odrv.axis0.encoder.set_linear_count(0)
     odrv.axis1.encoder.set_linear_count(0)
-    time.sleep(.5)
+    time.sleep(.6)
     odrv.axis0.controller.pos_setpoint = 0
     odrv.axis1.controller.pos_setpoint = 0
     return "DONE set encoder zero"
