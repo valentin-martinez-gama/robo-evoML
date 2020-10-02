@@ -70,7 +70,7 @@ def motor_encoder_initial(odrv_axis):
     print("Movment test ...")
     odrv_axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     odrv_axis.controller.move_to_pos(3000)
-    time.sleep(1)
+    time.sleep(.5)
     odrv_axis.requested_state = AXIS_STATE_IDLE
 
     if(odrv_axis.error != 0):
@@ -83,12 +83,6 @@ def motor_encoder_initial(odrv_axis):
     check_error(odrv_axis, "ERROR: after running set_vel_setpoint and turning the motor")
 
     return print("DONE motor_encoder_initial calibration")
-
-    """
-    From now on it os only needed to run
-    requested_State = AXIS_STATE_STARTUP_SEQUENCE
-    to start using the motor
-    """
 
 
 def set_encoder_zero(odrv, axis0_offset=460, axis1_offset=690):

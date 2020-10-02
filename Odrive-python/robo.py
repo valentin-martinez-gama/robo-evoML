@@ -9,7 +9,27 @@ from setup import calibrate
 from setup import configure
 from setup.calibrate import wait_for_idle
 
-def initialize(odrv):
+def start(odrv):
+
+    odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    odrv.axis0.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
+    odrv.axis1.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
+    odrv.axis0.controller.pos_setpoint = -1000
+    odrv.axis1.controller.pos_setpoint = -1000
+
+
+    if (odrv.axis0.error or odrv.axis1.error):
+        print("Odrive not calibrated - proceeding to calibration based on index search")
+        dump_errors(odrv, True)
+        first_time_calibration(odrv)
+
+    calibrate.set_encoder_zero(odrv)
+    time.sleep(1)
+
+    return "DONE start robo"
+
+def full_calibration(odrv):
 
     configure.hardware(odrv)
     configure.currents(odrv)
@@ -26,23 +46,6 @@ def initialize(odrv):
     time.sleep(2)
     calibrate.motor_encoder_initial(odrv.axis1)
     time.sleep(2)
-
-    calibrate.set_encoder_zero(odrv)
-    time.sleep(.5)
-
-    odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv.axis0.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
-    odrv.axis1.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
-
-    odrv.axis0.controller.pos_setpoint = 0
-    odrv.axis1.controller.pos_setpoint = 0
-    time.sleep(.4)
-    odrv.axis0.controller.pos_setpoint = 2000
-    odrv.axis1.controller.pos_setpoint = 2000
-    time.sleep(.6)
-    odrv.axis0.controller.pos_setpoint = 0
-    odrv.axis1.controller.pos_setpoint = 0
 
     configure.export_config(odrv, "roboInicial.json")
     odrv.save_configuration()
