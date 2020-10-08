@@ -36,6 +36,9 @@ octave-workspace
 #virtualenv for python
 env/
 
+#json config files
+*.json
+
 *.pyc
 __pycache__/
 

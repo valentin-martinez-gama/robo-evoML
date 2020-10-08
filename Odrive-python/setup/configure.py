@@ -21,6 +21,8 @@ def hardware(odrv):
     odrv.axis1.motor.config.pole_pairs = polePairs
     odrv.axis0.encoder.config.cpr = encoderCPR
     odrv.axis1.encoder.config.cpr = encoderCPR
+    odrv.axis0.encoder.config.use_index = True
+    odrv.axis1.encoder.config.use_index = True
     odrv.axis0.motor.config.motor_type = MOTOR_TYPE_HIGH_CURRENT
     odrv.axis1.motor.config.motor_type = MOTOR_TYPE_HIGH_CURRENT
     return "DONE hardware"
@@ -40,13 +42,17 @@ def currents(odrv, limiteCorriente = 20, calibracion = 10):
         return odrv.reboot()
     return"New current limits set"
 
-def gains(odrv, gan_pos=20, gan_vel= 5/10000.0, gan_int_vel = 10.0/10000.0):
+def gains(odrv, gan_pos=20, gan_vel= 125/1000.0, gan_int_vel = 250/1000.0):
     odrv.axis0.controller.config.pos_gain = gan_pos #[(counts/s) / counts]
     odrv.axis0.controller.config.vel_gain = gan_vel #[A/(counts/s)]
     odrv.axis0.controller.config.vel_integrator_gain = gan_int_vel #[A/((counts/s) * s)]
     return "New gains set"
 
-def velocity_limit(odrv, limiteVelocidad = encoderCPR*12):
+def velocity_limit(odrv, limiteVelocidad = 12):
     odrv.axis0.controller.config.vel_limit = limiteVelocidad
     odrv.axis1.controller.config.vel_limit = limiteVelocidad
     return "Nuevas velocity limits set"
+
+def set_startup_procedure(odrv_axis, index_search = False, closed_control = False):
+    odrv_axis.config.startup_encoder_index_search = index_search
+    odrv_axis.config.startup_closed_loop_control = closed_control
