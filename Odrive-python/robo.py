@@ -4,6 +4,7 @@ import time
 import odrive
 from odrive.enums import *
 from odrive.utils import dump_errors
+from odrive.utils import start_liveplotter
 
 from control.trayectory import *
 from setup import calibrate
@@ -41,7 +42,7 @@ def first_time_calibration(odrv):
     return print("DONE with initalization - Current State - Control Pos 3000")
 
 
-def loop_trayectory(odrv, pos1=0, pos2=pi, t1=.3, t2=.4):
+def trayectoria(odrv, loop = False, pos1=0, pos2=pi, t1=.3, t2=.4):
 
     odrv.axis0.requested_state = AXIS_STATE_STARTUP_SEQUENCE
     odrv.axis1.requested_state = AXIS_STATE_STARTUP_SEQUENCE
@@ -59,22 +60,34 @@ def loop_trayectory(odrv, pos1=0, pos2=pi, t1=.3, t2=.4):
     odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
-    #start_liveplotter(lambda:[odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.input_pos])
+    time.sleep(.5)
+    start_liveplotter(lambda:[odrv.axis0.encoder.pos_estimate, odrv.axis0.controller.input_pos])
 
+    for p in tray_outbound_turns:
+        odrv.axis0.controller.input_pos = p
+        odrv.axis1.controller.input_pos = p
+        time.sleep(T_periodo)
+    for p in tray_return_turns:
+        odrv.axis0.controller.input_pos = p
+        odrv.axis1.controller.input_pos = p
+        time.sleep(T_periodo)
+    '''
     try:
         while True:
-            for p in tray_outbound_cprs:
+            for p in tray_outbound_turns:
                 odrv.axis0.controller.input_pos = p
                 odrv.axis1.controller.input_pos = p
                 time.sleep(T_periodo)
-            for p in tray_return_cprs:
+            for p in tray_return_turns:
                 odrv.axis0.controller.input_pos = p
                 odrv.axis1.controller.input_pos = p
                 time.sleep(T_periodo)
-
+            if !loop:
+                break
     except KeyboardInterrupt:
         print("EXIT loop_trayectoria")
-    return
+    '''
+    return "FIN trayectoria"
 
 def loop_two_setpoints(odrv, pos1=0, pos2=.5, t=.3):
     odrv.axis0.requested_state = AXIS_STATE_STARTUP_SEQUENCE
