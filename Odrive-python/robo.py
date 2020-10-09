@@ -21,6 +21,11 @@ def start(odrv):
     calibrate.set_encoder_zero(odrv)
     time.sleep(1)
 
+    configure.currents(odrv)
+    configure.velocity_limit(odrv)
+    configure.gains(odrv, gan_pos=25, gan_vel= 250/1000.0, gan_int_vel = 400/1000.0)
+    configure.trap_traj(odrv, vel_lim = 6, accel_lim = 36)
+
     return "DONE start robo"
 
 def first_time_calibration(odrv):
@@ -59,6 +64,8 @@ def trayectoria(odrv, loop = False, pos1=0, pos2=pi, t1=.3, t2=.4):
     odrv.axis1.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
     odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+    odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
 
     time.sleep(.5)
     start_liveplotter(lambda:[odrv.axis0.encoder.pos_estimate, odrv.axis0.controller.input_pos])
@@ -89,23 +96,42 @@ def trayectoria(odrv, loop = False, pos1=0, pos2=pi, t1=.3, t2=.4):
     '''
     return "FIN trayectoria"
 
-def loop_two_setpoints(odrv, pos1=0, pos2=.5, t=.3):
+def loop_two_setpoints(odrv, pos1=0, pos2=.5, t_inter=.15):
     odrv.axis0.requested_state = AXIS_STATE_STARTUP_SEQUENCE
     odrv.axis1.requested_state = AXIS_STATE_STARTUP_SEQUENCE
     odrv.axis0.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
     odrv.axis1.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
     odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    odrv.axis0.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
+    odrv.axis1.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
+
+    a = odrv.axis0.trap_traj.config.accel_limit
+    vel_lim = odrv.axis0.trap_traj.config.vel_limit
+
+    time_acc = vel_lim/a
+    max_time_acc = sqrt((pos2-pos1)/2*2/a)
+
+    if time_acc < max_time_acc:
+        dist_acc = 1/2*a*(time_acc**2)
+        dist_cru = (pos2-pos1)-dist_acc*2
+        total_time = 2*time_acc + dist_cru/vel_lim
+        print("TIME Crusing = " + str(total_time))
+    else:
+        total_time = max_time_acc*2
+        print("TIME Accelerating = " + str(total_time))
 
     try:
         while True:
             odrv.axis0.controller.input_pos = pos1
             odrv.axis1.controller.input_pos = pos1
-            time.sleep(t)
+            time.sleep(total_time+t_inter)
             odrv.axis0.controller.input_pos = pos2
             odrv.axis1.controller.input_pos = pos2
-            time.sleep(t)
+            time.sleep(total_time+t_inter)
     except KeyboardInterrupt:
+        odrv.axis0.controller.config.input_mode = 1
+        odrv.axis1.controller.config.input_mode = 1
         print("EXIT loop_two_setpoints")
     return
 

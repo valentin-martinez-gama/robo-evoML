@@ -40,18 +40,31 @@ def currents(odrv, limiteCorriente = 20, calibracion = 10):
         odrv.save_configuration()
         print("Rebooting to set MOSFET currents >60")
         return odrv.reboot()
-    return"New current limits set"
+    return print("NEW current limits set")
 
-def gains(odrv, gan_pos=20, gan_vel= 125/1000.0, gan_int_vel = 250/1000.0):
-    odrv.axis0.controller.config.pos_gain = gan_pos #[(counts/s) / counts]
-    odrv.axis0.controller.config.vel_gain = gan_vel #[A/(counts/s)]
-    odrv.axis0.controller.config.vel_integrator_gain = gan_int_vel #[A/((counts/s) * s)]
-    return "New gains set"
+def gains(odrv, gan_pos=20, gan_vel= 160/1000.0, gan_int_vel = 300/1000.0):
+    odrv.axis0.controller.config.pos_gain = gan_pos #[(turns/s) / turns]
+    odrv.axis0.controller.config.vel_gain = gan_vel #[Nm/(turns/s)]
+    odrv.axis0.controller.config.vel_integrator_gain = gan_int_vel #[Nm/((turns/s) * s)]
+    odrv.axis1.controller.config.pos_gain = gan_pos #[(turns/s) / turns]
+    odrv.axis1.controller.config.vel_gain = gan_vel #[Nm/(turns/s)]
+    odrv.axis1.controller.config.vel_integrator_gain = gan_int_vel #[Nm/((turns/s) * s)]
+    return print("NEW gains set")
+
+def trap_traj(odrv, vel_lim = 1, accel_lim = .5):
+        odrv.axis0.trap_traj.config.vel_limit = vel_lim
+        odrv.axis0.trap_traj.config.accel_limit = accel_lim
+        odrv.axis0.trap_traj.config.decel_limit = accel_lim
+        odrv.axis1.trap_traj.config.vel_limit = vel_lim
+        odrv.axis1.trap_traj.config.accel_limit = accel_lim
+        odrv.axis1.trap_traj.config.decel_limit = accel_lim
+        return print("NEW trap_traj set")
+
 
 def velocity_limit(odrv, limiteVelocidad = 12):
     odrv.axis0.controller.config.vel_limit = limiteVelocidad
     odrv.axis1.controller.config.vel_limit = limiteVelocidad
-    return "Nuevas velocity limits set"
+    return print("New velocity limits set")
 
 def set_startup_procedure(odrv_axis, index_search = False, closed_control = False):
     odrv_axis.config.startup_encoder_index_search = index_search
