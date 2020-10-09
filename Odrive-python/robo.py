@@ -54,8 +54,8 @@ def trayectoria(odrv, loop = False, pos1=0, pos2=pi, t1=.3, t2=.4):
     cpr = odrv.axis0.encoder.config.cpr
 
     T_periodo = .001
-    tray_outbound = pol_trayectory(t1, [pos1,pos2,0,0], T_periodo)
-    tray_return = pol_trayectory(t2, [pos2,pos1,0,0] , T_periodo)
+    tray_outbound = pol_trajectory(t1, [pos1,pos2,0,0], T_periodo)
+    tray_return = pol_trajectory(t2, [pos2,pos1,0,0] , T_periodo)
 
     tray_outbound_turns = [p/(2*pi) for p in tray_outbound]
     tray_return_turns = [p/(2*pi) for p in tray_return]

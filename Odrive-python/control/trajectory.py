@@ -2,7 +2,7 @@
 from sympy import *
 from math import ceil, pi
 
-def pol_trayectory(time, parameters, T = .01):
+def pol_trajectory(time, parameters, T = .01):
 
     matrixSize = len(parameters)
     tfin = Symbol('tfin')
@@ -37,8 +37,8 @@ def pol_trayectory(time, parameters, T = .01):
     setpoint = lambdify(t, polinomial, "numpy")
     for n in range(0,ceil(time/T)):
         setpointsArray.append(setpoint(n*T))
-
+    print("Total Setpoints = " +str(len(setpointsArray)))
     return setpointsArray
 
 if(__name__ == '__main__'):
-    print(pol_trayectory(3, [0,pi/2,0,-pi/4,0,0], .01))
+    print(pol_trajectory(3, [0,pi/2,0,-pi/4,0,0], .01))
