@@ -2,7 +2,7 @@
 from sympy import *
 from math import ceil, pi
 
-def pol_trajectory(time, parameters, T = .01):
+def pol_trajectory(time, parameters, T = .001):
 
     matrixSize = len(parameters)
     tfin = Symbol('tfin')
@@ -16,6 +16,8 @@ def pol_trajectory(time, parameters, T = .01):
             A[d,c] = diff(A[1,c], tfin, round((d-1)/2))
     for f in range(2, matrixSize, 2):
         A[f,f-1] = factorial(f/2)
+
+    print(A)
 
     numA =zeros(matrixSize, matrixSize);
     for i in range(0,matrixSize):
@@ -41,4 +43,4 @@ def pol_trajectory(time, parameters, T = .01):
     return setpointsArray
 
 if(__name__ == '__main__'):
-    print(pol_trajectory(3, [0,pi/2,0,-pi/4,0,0], .01))
+    print(pol_trajectory(.3, [0,pi/2,0,-pi/4], .001))

@@ -69,3 +69,10 @@ def velocity_limit(odrv, limiteVelocidad = 12):
 def set_startup_procedure(odrv_axis, index_search = False, closed_control = False):
     odrv_axis.config.startup_encoder_index_search = index_search
     odrv_axis.config.startup_closed_loop_control = closed_control
+
+def set_position_control(odrv):
+        odrv.axis0.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
+        odrv.axis1.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
+        odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+        odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+        return "SET set_position_control"
