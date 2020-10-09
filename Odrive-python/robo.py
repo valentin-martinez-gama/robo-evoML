@@ -61,17 +61,8 @@ def loop_trajectory(odrv, loop = False, pos1=0, pos2=pi, t1=.3, t2=.4):
     odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
 
     time.sleep(.5)
-    start_liveplotter(lambda:[odrv.axis0.encoder.pos_estimate, odrv.axis0.controller.input_pos])
+    #start_liveplotter(lambda:[odrv.axis0.encoder.pos_estimate, odrv.axis0.controller.input_pos])
 
-    for p in tray_outbound_turns:
-        odrv.axis0.controller.input_pos = p
-        odrv.axis1.controller.input_pos = p
-        time.sleep(T_periodo)
-    for p in tray_return_turns:
-        odrv.axis0.controller.input_pos = p
-        odrv.axis1.controller.input_pos = p
-        time.sleep(T_periodo)
-    '''
     try:
         while True:
             for p in tray_outbound_turns:
@@ -82,11 +73,11 @@ def loop_trajectory(odrv, loop = False, pos1=0, pos2=pi, t1=.3, t2=.4):
                 odrv.axis0.controller.input_pos = p
                 odrv.axis1.controller.input_pos = p
                 time.sleep(T_periodo)
-            if !loop:
+            if loop == False:
                 break
     except KeyboardInterrupt:
         print("EXIT loop_trayectoria")
-    '''
+
     return "FIN trayectoria"
 
 def loop_two_setpoints(odrv, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_inter=.15):
@@ -104,6 +95,7 @@ def loop_two_setpoints(odrv, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_inter=.
     print("time_acc = " + str(time_acc))
     time_midpos_acc = sqrt((pos2-pos1)/2*2/a)
     print("time_midpos_acc = " + str(time_midpos_acc))
+
     dist_acc = 1/2*a*(time_acc**2)
     dist_cru = (pos2-pos1)-dist_acc*2
 
@@ -128,14 +120,20 @@ def loop_two_setpoints(odrv, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_inter=.
         print("TIME Crusing = " + str(total_time))
     '''
     try:
+        n=0
         while True:
             print("INPUT pos 1")
+            '''
             odrv.axis0.controller.input_pos = pos1
             odrv.axis1.controller.input_pos = pos1
             time.sleep(total_time+t_inter)
             odrv.axis0.controller.input_pos = pos2
             odrv.axis1.controller.input_pos = pos2
+            '''
             time.sleep(total_time+t_inter)
+            n+=1
+            if n == 10:
+                break
     except KeyboardInterrupt:
         odrv.axis0.controller.config.input_mode = 1
         odrv.axis1.controller.config.input_mode = 1

@@ -87,7 +87,7 @@ def motor_encoder_initial(odrv_axis):
     return print("DONE motor_encoder_initial calibration")
 
 
-def set_encoder_zero(odrv, axis0_offset=460/8192, axis1_offset=690/8192):
+def set_encoder_zero(odrv, axis0_offset=460/8192, axis1_offset=(690+2048)/8192):
 
     odrv.axis0.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
     odrv.axis1.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
@@ -106,7 +106,7 @@ def set_encoder_zero(odrv, axis0_offset=460/8192, axis1_offset=690/8192):
     time.sleep(.6)
     odrv.axis0.controller.input_pos = 0
     odrv.axis1.controller.input_pos = 0
-    
+
     return print("DONE set encoder zero")
 
 
