@@ -1,2 +1,4 @@
 # Script test
-import Pandas as pd
+import pandas as pd
+
+df = pd.DataFrame()
