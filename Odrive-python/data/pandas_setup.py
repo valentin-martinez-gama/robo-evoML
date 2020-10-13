@@ -19,5 +19,7 @@ def build_pandas(samples):
         df.insert(2*i+5, desired_pos, pd.Series([], dtype=float))
     return df
 
-def data_aquisition():
-    for i in range(samples):
+def add_pandas_entry(df, id, kp, kv, kvi, estimates, inputs):
+    row = [id, kp, kv, kvi] + estimates + inputs
+    df.loc[len(df.index)] = row
+    return df
