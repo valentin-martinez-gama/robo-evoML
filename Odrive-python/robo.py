@@ -92,27 +92,8 @@ def loop_two_setpoints(odrv, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_inter=.
     vel_lim = odrv.axis0.trap_traj.config.vel_limit
 
     time_acc = vel_lim/a
-    print("time_acc = " + str(time_acc))
     time_midpos_acc = sqrt((pos2-pos1)/2*2/a)
-    print("time_midpos_acc = " + str(time_midpos_acc))
 
-    dist_acc = 1/2*a*(time_acc**2)
-    dist_cru = (pos2-pos1)-dist_acc*2
-
-    if time_midpos_acc < time_acc:
-        transit_time = 2*time_midpos_acc
-        print("TIME Acc")
-    if time_midpos_acc > time_acc:
-        transit_time = 2*time_acc + abs(dist_cru)/vel_lim
-        print("TIME Cru")
-
-    #transit_time = max(time_midpos_acc*2, 2*time_acc + dist_cru/vel_lim)
-    print("TIME Accelerating = " + str(time_midpos_acc*2))
-    print("TIME Crusing = " + str(2*time_acc + abs(dist_cru)/vel_lim))
-
-    tot_time = float(transit_time + t_inter)
-    print(tot_time)
-    '''
     if time_acc > time_midpos_acc:
         transit_time = time_midpos_acc*2
         print("TIME Accelerating = " + str(transit_time))
@@ -121,23 +102,27 @@ def loop_two_setpoints(odrv, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_inter=.
         dist_cru = (pos2-pos1)-dist_acc*2
         transit_time = 2*time_acc + dist_cru/vel_lim
         print("TIME Crusing = " + str(transit_time))
-    '''
+
+    tot_time = float(transit_time + t_inter)
+    print(tot_time)
+
     try:
         n=0
         while True:
             print("INPUT pos 1")
-            '''
             odrv.axis0.controller.input_pos = pos1
             odrv.axis1.controller.input_pos = pos1
-            time.sleep(transit_time+t_inter)
+            time.sleep(tot_time)
             odrv.axis0.controller.input_pos = pos2
             odrv.axis1.controller.input_pos = pos2
-            '''
             time.sleep(tot_time)
             n+=1
             if n == 10:
                 break
     except KeyboardInterrupt:
+        odrv.axis0.controller.input_pos = pos1
+        odrv.axis1.controller.input_pos = pos1
+        time.sleep(.5)
         odrv.axis0.controller.config.input_mode = 1
         odrv.axis1.controller.config.input_mode = 1
         print("EXIT loop_two_setpoints")
