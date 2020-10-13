@@ -23,3 +23,7 @@ def add_pandas_entry(df, id, kp, kv, kvi, estimates, inputs):
     row = [id, kp, kv, kvi] + estimates + inputs
     df.loc[len(df.index)] = row
     return df
+
+def csv_export(df):
+    csv_name = input("Introduce el nombre con el que quieres guardar el archivo (SIN .csv): ")
+    df.to_csv(rf"{csv_name}.csv", index = False)
