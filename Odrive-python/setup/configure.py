@@ -25,6 +25,8 @@ def hardware(odrv):
     odrv.axis1.encoder.config.use_index = True
     odrv.axis0.motor.config.motor_type = MOTOR_TYPE_HIGH_CURRENT
     odrv.axis1.motor.config.motor_type = MOTOR_TYPE_HIGH_CURRENT
+    odrv.axis0.motor.config.torque_constant = 8.27/270
+    odrv.axis1.motor.config.torque_constant = 8.27/270
     return "DONE hardware"
 
 def currents(odrv, limiteCorriente = 20, calibracion = 10):
