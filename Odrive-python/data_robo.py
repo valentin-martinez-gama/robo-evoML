@@ -32,7 +32,7 @@ def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=100):
     sample_interval = (len(tray_outbound)+len(tray_return))/samples
 
     for it in range(1,iters+1):
-        configure.gains(odrv, gan_pos = kp_min + it*(kp_max-kp_min)/(iters-1), gan_vel = 160/1000, gan_int_vel = 300/1000)
+        configure.gains(odrv, gan_pos = kp_min + it*(kp_max-kp_min)/(iters-1), gan_vel = 160/1000, gan_int_vel = 0/1000)
 
         estimates = []
         inputs = []
@@ -57,5 +57,5 @@ def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=100):
 
         data = pandas_setup.add_pandas_entry(data, it, odrv.axis0.controller.config.pos_gain, odrv.axis0.controller.config.vel_gain, odrv.axis0.controller.config.vel_integrator_gain,
         estimates, inputs)
-    print(data)
+    pandas_setup.csv_export(data)
     return "FIN trayectoria"
