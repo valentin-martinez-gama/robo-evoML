@@ -144,3 +144,8 @@ def idle(odrv):
     odrv.axis0.requested_state = 1
     odrv.axis1.requested_state = 1
     return "Setting both motors to idle"
+
+def home(odrv):
+    odrv.axis0.controller.input_pos = 0
+    odrv.axis1.controller.input_pos = 0
+    return "HOME"
