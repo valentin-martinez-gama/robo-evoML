@@ -1,6 +1,7 @@
 import pandas as pd
+import numpy as np
 
-def build_pandas(samples):
+def build_raw(samples):
     df = pd.DataFrame()
     # Create columns to store data
     id = pd.Series([], dtype=int)
@@ -22,37 +23,29 @@ def build_pandas(samples):
         df.insert(4*i+7, vel_estimate, pd.Series([], dtype=float))
     return df
 
-def add_pandas_entry(df, id, kp, kv, kvi, estimates, inputs, currents, vels):
+def add_raw(df, id, kp, kv, kvi, estimates, inputs, currents, vels):
     row = [id, kp, kv, kvi] + estimates + inputs + currents + vels
-    df.loc[len(df.index)] = row
+    df.loc[len(df)] = row
     return df
 
-def calculate_error(data, samples):
-    df = pd.DataFrame()
-    df = data.iloc[:, :4]
-    positive_error = pd.Series([], dtype=float)
-    negative_error = pd.Series([], dtype=float)
-    current_sum = pd.Series([], dtype=float)
-    curr_vel = pd.Series([], dtype=float)
-    for i in range(len(data)):
-        pos_error = 0.0
-        neg_error = 0.0
-        total_current = 0.0
-        all_curr_vel = []
-        for s in range(samples):
-            error = data["input_pos" + str(s)][i] - data["pos_estimate" + str(s)][i]
-            if error > 0:
-                pos_error += error
-            else:
-                neg_error += error
-            iter_curr = data["iq_measured" + str(s)][i]
-            total_current += abs(iter_curr)
-            cur_vel_division = iter_curr/data["vel_estimate" + str(s)][i]
-            all_curr_vel.append(cur_vel_division)
-        positive_error[i] = pos_error
-        negative_error[i] = neg_error
-        current_sum[i] = total_current
-        curr_vel[i] = sum(all_curr_vel)/float(len(all_curr_vel))
+def clean_data(data, samples):
+    gains = data.iloc[:, :4]
+    estimates = data.iloc[:, 4:(samples+4)]
+    inputs = data.iloc[:, (samples+4):(2*samples+4)]
+    currents = data.iloc[:, (2*samples+4):(3*samples+4)]
+    vels = data.iloc[:, (3*samples+4):(4*samples+4)]
+
+    inputs.columns = estimates.columns
+    errors = inputs-estimates
+    positive_error = errors.where(errors > 0).sum(1)
+    negative_error = errors.where(errors < 0).sum(1)
+
+    current_sum = currents.abs().sum(1)
+
+    vels.columns = currents.columns
+    curr_vel = (currents.abs()/vels.abs()).mean(1)
+
+    df = gains
     df.insert(4, "positive_error", positive_error)
     df.insert(5, "negative_error", negative_error)
     df.insert(6, "current_sum", current_sum)

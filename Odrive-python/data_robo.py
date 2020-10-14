@@ -1,5 +1,5 @@
 import robo
-from data import pandas_setup
+from data import robo_pandas
 
 from math import pi
 import time
@@ -10,7 +10,7 @@ from control.trajectory import *
 from setup import calibrate
 from setup import configure
 
-def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=100):
+def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=10):
     robo.home(odrv)
     pos1=0
     pos2=pi
@@ -27,9 +27,8 @@ def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=100):
     odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
     time.sleep(.5)
 
-    data = pandas_setup.build_pandas(samples)
-    print(data)
-    sample_interval = (len(tray_outbound)+len(tray_return))/samples
+    raw = robo_pandas.build_raw(samples)
+    sample_interval = (len(tray_outbound)+len(tray_return))//samples
 
     for it in range(0,iters):
         configure.gains(odrv, gan_pos = kp_min + it*(kp_max-kp_min)/(iters), gan_vel = 160/1000, gan_int_vel = 0/1000)
@@ -38,32 +37,37 @@ def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=100):
         inputs = []
         currents = []
         vels = []
-
+        n=0
         for i, p in enumerate(tray_outbound_turns):
             odrv.axis0.controller.input_pos = p
             odrv.axis1.controller.input_pos = p
             time.sleep(T_periodo)
 
-            if (i%sample_interval == 1):
+            if ((i-1)%sample_interval == sample_interval-1):
                 inputs.append(p)
                 estimates.append(odrv.axis0.encoder.pos_estimate)
                 currents.append(odrv.axis0.motor.current_control.Iq_measured)
                 vels.append(odrv.axis0.encoder.vel_estimate)
+                n +=1
+                print(n)
 
         for i, p in enumerate(tray_return_turns):
             odrv.axis0.controller.input_pos = p
             odrv.axis1.controller.input_pos = p
             time.sleep(T_periodo)
 
-            if (i%sample_interval == 1):
+            if ((i+len(tray_outbound)-1)%sample_interval == sample_interval-1):
                 inputs.append(p)
                 estimates.append(odrv.axis0.encoder.pos_estimate)
                 currents.append(odrv.axis0.motor.current_control.Iq_measured)
                 vels.append(odrv.axis0.encoder.vel_estimate)
+                n +=1
+                print(n)
 
-        data = pandas_setup.add_pandas_entry(data, it, odrv.axis0.controller.config.pos_gain, odrv.axis0.controller.config.vel_gain, odrv.axis0.controller.config.vel_integrator_gain,
+        raw = robo_pandas.add_raw(raw, it, odrv.axis0.controller.config.pos_gain, odrv.axis0.controller.config.vel_gain, odrv.axis0.controller.config.vel_integrator_gain,
         estimates, inputs, currents, vels)
 
-    clean = pandas_setup.calculate_error(data, samples)
-    pandas_setup.csv_export(clean)
+    robo_pandas.csv_export(raw)
+    clean = robo_pandas.clean_data(raw, samples)
+    robo_pandas.csv_export(clean)
     return "FIN trayectoria"
