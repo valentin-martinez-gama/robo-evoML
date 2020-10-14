@@ -63,7 +63,7 @@ def loop_data(odrv, kp_min=10, kp_max=40, iters=4, samples=10):
         raw = robo_pandas.add_raw(raw, it, odrv.axis0.controller.config.pos_gain, odrv.axis0.controller.config.vel_gain, odrv.axis0.controller.config.vel_integrator_gain,
         estimates, inputs, currents, vels)
 
-    robo_pandas.csv_export(raw)
+    robo_pandas.export_raw(raw)
     clean = robo_pandas.clean_data(raw)
     robo_pandas.csv_export(clean)
     return "FIN trayectoria"
