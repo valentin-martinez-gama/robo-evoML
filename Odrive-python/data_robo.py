@@ -10,7 +10,7 @@ from control.trajectory import *
 from setup import calibrate
 from setup import configure
 
-def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=10):
+def loop_data(odrv, kp_min=10, kp_max=40, iters=4, samples=10):
     robo.home(odrv)
     pos1=0
     pos2=pi
@@ -48,8 +48,6 @@ def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=10):
                 estimates.append(odrv.axis0.encoder.pos_estimate)
                 currents.append(odrv.axis0.motor.current_control.Iq_measured)
                 vels.append(odrv.axis0.encoder.vel_estimate)
-                n +=1
-                print(n)
 
         for i, p in enumerate(tray_return_turns):
             odrv.axis0.controller.input_pos = p
@@ -61,13 +59,11 @@ def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=10):
                 estimates.append(odrv.axis0.encoder.pos_estimate)
                 currents.append(odrv.axis0.motor.current_control.Iq_measured)
                 vels.append(odrv.axis0.encoder.vel_estimate)
-                n +=1
-                print(n)
 
         raw = robo_pandas.add_raw(raw, it, odrv.axis0.controller.config.pos_gain, odrv.axis0.controller.config.vel_gain, odrv.axis0.controller.config.vel_integrator_gain,
         estimates, inputs, currents, vels)
 
     robo_pandas.csv_export(raw)
-    clean = robo_pandas.clean_data(raw, samples)
+    clean = robo_pandas.clean_data(raw)
     robo_pandas.csv_export(clean)
     return "FIN trayectoria"
