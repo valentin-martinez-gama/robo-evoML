@@ -1,3 +1,4 @@
+appdirs==1.4.4
 backcall==0.2.0
 certifi==2020.6.20
 chardet==3.0.4
@@ -14,15 +15,17 @@ matplotlib==3.3.1
 monotonic==1.5
 mpmath==1.1.0
 numpy==1.19.1
-odrive==0.4.12
+odrive==0.5.1
 parso==0.7.1
 pickleshare==0.7.5
 Pillow==7.2.0
+pipdeptree==1.0.0
 prompt-toolkit==3.0.7
 Pygments==2.6.1
 pyparsing==2.4.7
 pyserial==3.4
 python-dateutil==2.8.1
+pytz==2020.1
 pyusb==1.0.2
 pywin32==228
 requests==2.24.0
