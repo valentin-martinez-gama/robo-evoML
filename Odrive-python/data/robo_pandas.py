@@ -32,7 +32,7 @@ def clean_data(data):
     positive_error = [sum(filter(lambda e: e >0, iter)) for iter in errors]
     negative_error = [sum(filter(lambda e: e <0, iter)) for iter in errors]
     current_sum = [sum(np.abs(iter)) for iter in currents]
-    curr_vel = list(map(lambda c,v: np.mean(np.divide(np.abs(c),np.abs(v))), currents, vels))
+    curr_vel = list(map(lambda c,v: np.mean(np.abs(c))/np.mean(np.abs(v)), currents, vels))
 
     df = gains
     df.insert(4, "positive_error", positive_error)
