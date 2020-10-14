@@ -47,7 +47,7 @@ def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=100):
             if (i%sample_interval == 1):
                 inputs.append(p)
                 estimates.append(odrv.axis0.encoder.pos_estimate)
-                currents.append(odrv0.axis0.motor.current_control.Iq_measured)
+                currents.append(odrv.axis0.motor.current_control.Iq_measured)
                 vels.append(odrv.axis0.encoder.vel_estimate)
 
         for i, p in enumerate(tray_return_turns):
@@ -58,7 +58,7 @@ def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=100):
             if (i%sample_interval == 1):
                 inputs.append(p)
                 estimates.append(odrv.axis0.encoder.pos_estimate)
-                currents.append(odrv0.axis0.motor.current_control.Iq_measured)
+                currents.append(odrv.axis0.motor.current_control.Iq_measured)
                 vels.append(odrv.axis0.encoder.vel_estimate)
 
         data = pandas_setup.add_pandas_entry(data, it, odrv.axis0.controller.config.pos_gain, odrv.axis0.controller.config.vel_gain, odrv.axis0.controller.config.vel_integrator_gain,
@@ -67,5 +67,3 @@ def data_loop(odrv, kp_min=10, kp_max=40, iters=4, samples=100):
     clean = pandas_setup.calculate_error(data, samples)
     pandas_setup.csv_export(clean)
     return "FIN trayectoria"
-
-def optimize_gains()
