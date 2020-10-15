@@ -13,5 +13,5 @@ Kpi = 0.01;  % Proportional gain current controller
 Kii = 0.08;  % Integrator gain current controller
 Kpw = 0.1;   % Proportional gain speed controller
 Kiw = 15;    % Integrator gain speed controller
-Kpp = 5500;   % Proportional gain position controller
-Kip = 3000;   % Integrator gain position controller
+Kpp = 500;   % Proportional gain position controller
+Kip = 300;   % Integrator gain position controller
