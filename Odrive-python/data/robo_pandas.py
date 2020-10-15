@@ -28,17 +28,24 @@ def clean_data(data):
     vels = data.iloc[:, 7]
 
     #errors = ([np.subtract(inputs[i], estimates[i]) for i in range(inputs.size)])
+    sample_size = len(estimates[0])
     errors = list(map(lambda i,e: np.subtract(i,e), inputs, estimates))
-    positive_error = [sum(filter(lambda e: e >0, iter)) for iter in errors]
-    negative_error = [sum(filter(lambda e: e <0, iter)) for iter in errors]
+    lag_errors =
+    [sum(filter(lambda e: e>0, iter)) for iter in errors[0:sample_size]] + [sum(filter(lambda e: e<0, iter)) for iter in errors[sample_size:]]
+    ahead_error =
+    [sum(filter(lambda e: e<0, iter)) for iter in errors[0:sample_size]] + [sum(filter(lambda e: e>0, iter)) for iter in errors[sample_size:]]
+
+    overshoot_error = list(map(lambda i,e: max(e)-max(i), inputs, estimates))
+
     current_sum = [sum(np.abs(iter)) for iter in currents]
     curr_vel = list(map(lambda c,v: np.mean(np.abs(c))/np.mean(np.abs(v)), currents, vels))
 
     df = gains
-    df.insert(4, "positive_error", positive_error)
-    df.insert(5, "negative_error", negative_error)
-    df.insert(6, "current_sum", current_sum)
-    df.insert(7, "curr_vel", curr_vel)
+    df.insert(4, "lag_error", lag_error)
+    df.insert(5, "ahead_error", ahead_error)
+    df.insert(6, "overshoot_error", overshoot_error)
+    df.insert(7, "current_sum", current_sum)
+    df.insert(8, "curr_vel", curr_vel)
     return df
 
 def export_raw(rawdf):

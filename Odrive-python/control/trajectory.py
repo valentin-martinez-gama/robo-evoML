@@ -2,6 +2,20 @@
 from sympy import *
 from math import ceil, pi
 
+def build_trajectory(pos1=0, pos2=pi, t1=.2, t2=.3, res=100):
+
+    out_T = t1/res
+    ret_T = t2/res
+    outbound_trajectory = pol_trajectory(t1, [pos1,pos2,0,0], out_T)
+    return_trajectory = pol_trajectory(t2, [pos2,pos1,0,0], ret_T)
+    outbound_traj_turns = [p/(2*pi) for p in outbound_trajectory]
+    return_traj_turns = [p/(2*pi) for p in return_trajectory]
+
+    return {"OUTBOUND":outbound_traj_turns,
+            "RETURN": return_traj_turns,
+            "OUT_PERIOD":out_T,
+            "RET_PERIOD":ret_T}
+
 def pol_trajectory(time, parameters, T = .001):
 
     matrixSize = len(parameters)
@@ -17,8 +31,6 @@ def pol_trajectory(time, parameters, T = .001):
     for f in range(2, matrixSize, 2):
         A[f,f-1] = factorial(f/2)
 
-    print(A)
-
     numA =zeros(matrixSize, matrixSize);
     for i in range(0,matrixSize):
         for j in range(0,matrixSize):
@@ -32,15 +44,10 @@ def pol_trajectory(time, parameters, T = .001):
     t = Symbol('t')
     for c in range(0, matrixSize):
         polinomial += sols[coefs[c]]*t**c
-
-    plot(polinomial, xlim=(-.1*time, 1.1*time), ylim=(-pi,pi))
+    #plot(polinomial, xlim=(-.1*time, 1.1*time), ylim=(-pi,pi))
 
     setpointsArray = []
     setpoint = lambdify(t, polinomial, "numpy")
     for n in range(0,ceil(time/T)):
         setpointsArray.append(setpoint(n*T))
-    print("Total Setpoints = " +str(len(setpointsArray)))
     return setpointsArray
-
-if(__name__ == '__main__'):
-    print(pol_trajectory(.3, [0,pi/2,0,-pi/4], .001))
