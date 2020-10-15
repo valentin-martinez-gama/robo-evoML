@@ -6,7 +6,7 @@ from odrive.enums import *
 from odrive.utils import dump_errors
 from odrive.utils import start_liveplotter
 
-from control.trajectory import *
+import control.trajectory as tj
 from setup import calibrate
 from setup import configure
 from setup.calibrate import wait_for_idle
@@ -47,52 +47,50 @@ def first_time_calibration(odrv):
     return print("DONE with initalization - Current State - Control Pos 3000")
 
 
-def loop_trajectory(odrv, loop = False, pos1=0, pos2=pi, t1=.3, t2=.4):
-
-    T_periodo = .001
-    tray_outbound = pol_trajectory(t1, [pos1,pos2,0,0], T_periodo)
-    tray_return = pol_trajectory(t2, [pos2,pos1,0,0] , T_periodo)
-
-    tray_outbound_turns = [p/(2*pi) for p in tray_outbound]
-    tray_return_turns = [p/(2*pi) for p in tray_return]
+def trajectory(odrv, loop = False, trajectory=tj.build_trajectory()):
 
     configure.set_position_control(odrv)
     odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
     odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
-
     time.sleep(.5)
-    #start_liveplotter(lambda:[odrv.axis0.encoder.pos_estimate, odrv.axis0.controller.input_pos])
 
-    try:
-        while True:
-            for p in tray_outbound_turns:
-                odrv.axis0.controller.input_pos = p
-                odrv.axis1.controller.input_pos = p
-                time.sleep(T_periodo)
-            for p in tray_return_turns:
-                odrv.axis0.controller.input_pos = p
-                odrv.axis1.controller.input_pos = p
-                time.sleep(T_periodo)
-            if loop == False:
-                break
-    except KeyboardInterrupt:
-        print("EXIT loop_trayectoria")
+    for p in trajectory["OUTBOUND"]:
+        odrv.axis0.controller.input_pos = p
+        odrv.axis1.controller.input_pos = p
+        time.sleep(trajectory["OUT_PERIOD"])
+    for p in trajectory["RETURN"]:
+        odrv.axis0.controller.input_pos = p
+        odrv.axis1.controller.input_pos = p
+        time.sleep(trajectory["RET_PERIOD"])
+
+    if loop == True:
+        try:
+            while True:
+                for p in trajectory["OUTBOUND"]:
+                    odrv.axis0.controller.input_pos = p
+                    odrv.axis1.controller.input_pos = p
+                    time.sleep(trajectory["OUT_PERIOD"])
+                for p in trajectory["RETURN"]:
+                    odrv.axis0.controller.input_pos = p
+                    odrv.axis1.controller.input_pos = p
+                    time.sleep(trajectory["RET_PERIOD"])
+        except KeyboardInterrupt:
+            print("EXIT loop_trajectory")
 
     return "FIN trayectoria"
 
-def loop_two_setpoints(odrv, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_inter=.15):
+def trapezoidal(odrv, loop=False, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_inter=.1):
 
     configure.set_position_control(odrv)
     odrv.axis0.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
     odrv.axis1.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
-
     configure.trap_traj(odrv, vel_lim, accel_lim)
 
     a = odrv.axis0.trap_traj.config.accel_limit
     vel_lim = odrv.axis0.trap_traj.config.vel_limit
 
     time_acc = vel_lim/a
-    time_midpos_acc = sqrt((pos2-pos1)/2*2/a)
+    time_midpos_acc = math.sqrt((pos2-pos1)/2*2/a)
 
     if time_acc > time_midpos_acc:
         transit_time = time_midpos_acc*2
@@ -105,28 +103,64 @@ def loop_two_setpoints(odrv, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_inter=.
 
     tot_time = float(transit_time + t_inter)
     print(tot_time)
+    odrv.axis0.controller.input_pos = pos1
+    odrv.axis1.controller.input_pos = pos1
+    time.sleep(tot_time)
+    odrv.axis0.controller.input_pos = pos2
+    odrv.axis1.controller.input_pos = pos2
+    time.sleep(tot_time)
+    odrv.axis0.controller.input_pos = pos1
+    odrv.axis1.controller.input_pos = pos1
+    time.sleep(tot_time)
 
-    try:
-        n=0
-        while True:
-            print("INPUT pos 1")
+    if loop == True:
+        try:
+            while True:
+                odrv.axis0.controller.input_pos = pos2
+                odrv.axis1.controller.input_pos = pos2
+                time.sleep(tot_time)
+                odrv.axis0.controller.input_pos = pos1
+                odrv.axis1.controller.input_pos = pos1
+                time.sleep(tot_time)
+        except KeyboardInterrupt:
             odrv.axis0.controller.input_pos = pos1
             odrv.axis1.controller.input_pos = pos1
-            time.sleep(tot_time)
-            odrv.axis0.controller.input_pos = pos2
-            odrv.axis1.controller.input_pos = pos2
-            time.sleep(tot_time)
-            n+=1
-            if n == 10:
-                break
-    except KeyboardInterrupt:
-        odrv.axis0.controller.input_pos = pos1
-        odrv.axis1.controller.input_pos = pos1
-        time.sleep(.5)
-        odrv.axis0.controller.config.input_mode = 1
-        odrv.axis1.controller.config.input_mode = 1
-        print("EXIT loop_two_setpoints")
-    return
+            time.sleep(.5)
+            odrv.axis0.controller.config.input_mode = 1
+            odrv.axis1.controller.config.input_mode = 1
+            print("EXIT loop_trapezoidal")
+    return"FIN Trapezoide"
+
+def hard(odrv, loop=False, pos1=0, pos2=.5, time_switch=.1):
+    configure.set_position_control(odrv)
+    odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+    odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+
+    odrv.axis0.controller.input_pos = pos1
+    odrv.axis1.controller.input_pos = pos1
+    time.sleep(time_switch)
+    odrv.axis0.controller.input_pos = pos2
+    odrv.axis1.controller.input_pos = pos2
+    time.sleep(time_switch)
+    odrv.axis0.controller.input_pos = pos1
+    odrv.axis1.controller.input_pos = pos1
+    time.sleep(time_switch)
+
+    if loop == True:
+        try:
+            while True:
+                odrv.axis0.controller.input_pos = pos2
+                odrv.axis1.controller.input_pos = pos2
+                time.sleep(time_switch)
+                odrv.axis0.controller.input_pos = pos1
+                odrv.axis1.controller.input_pos = pos1
+                time.sleep(time_switch)
+        except KeyboardInterrupt:
+            odrv.axis0.controller.input_pos = pos1
+            odrv.axis1.controller.input_pos = pos1
+
+            print("EXIT loop_two_setpoints")
+    return"FIN Hard Setpoints"
 
 def idle(odrv):
     odrv.axis0.requested_state = 1
