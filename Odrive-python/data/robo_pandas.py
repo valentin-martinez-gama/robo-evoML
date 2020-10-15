@@ -30,10 +30,8 @@ def clean_data(data):
     #errors = ([np.subtract(inputs[i], estimates[i]) for i in range(inputs.size)])
     sample_size = len(estimates[0])
     errors = list(map(lambda i,e: np.subtract(i,e), inputs, estimates))
-    lag_errors =
-    [sum(filter(lambda e: e>0, iter)) for iter in errors[0:sample_size]] + [sum(filter(lambda e: e<0, iter)) for iter in errors[sample_size:]]
-    ahead_error =
-    [sum(filter(lambda e: e<0, iter)) for iter in errors[0:sample_size]] + [sum(filter(lambda e: e>0, iter)) for iter in errors[sample_size:]]
+    lag_error = [sum(filter(lambda e: e>0, iter)) for iter in errors[0:sample_size]] + [sum(filter(lambda e: e<0, iter)) for iter in errors[sample_size:]]
+    ahead_error = [sum(filter(lambda e: e<0, iter)) for iter in errors[0:sample_size]] + [sum(filter(lambda e: e>0, iter)) for iter in errors[sample_size:]]
 
     overshoot_error = list(map(lambda i,e: max(e)-max(i), inputs, estimates))
 
