@@ -11,10 +11,22 @@ from control.trajectory import *
 from setup import calibrate
 from setup import configure
 
-def loop_data(odrv, kp_min=10, kp_max=40, iters=4, samples=40):
-    robo.home(odrv)
+def optimize_gains(odrv):
+
     # Make sure samples < trj(res)
     traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=.2, t2=.3, res=120)
+
+    for it in range(0,iters):
+
+        configure.gains(odrv, gan_pos=kp, gan_vel=0/1000, gan_int_vel=ki)
+
+        traj_df = data_traj(odrv, traj, 1, 40)
+        #Hard_Step_DF?
+        #Idle_DF?
+
+        
+def data_traj(odrv, traj, iters=1, samples=40):
+    robo.home(odrv)
 
     configure.set_position_control(odrv)
     odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
@@ -25,7 +37,6 @@ def loop_data(odrv, kp_min=10, kp_max=40, iters=4, samples=40):
     sample_interval = (len(traj["OUTBOUND"])+len(traj["RETURN"]))//samples
 
     for it in range(0,iters):
-        configure.gains(odrv, gan_pos = kp_min + it*(kp_max-kp_min)/(iters-1), gan_vel = 160/1000, gan_int_vel = 0/1000)
         estimates = []
         inputs = []
         currents = []
@@ -45,7 +56,7 @@ def loop_data(odrv, kp_min=10, kp_max=40, iters=4, samples=40):
             odrv.axis0.controller.input_pos = p
             odrv.axis1.controller.input_pos = p
             time.sleep(traj["RET_PERIOD"])
-            if ((i+len(traj["OUTBOUND"])-1)%sample_interval == sample_interval-1):
+            if ((i-1+len(traj["OUTBOUND"]))%sample_interval == sample_interval-1):
                 inputs.append(p)
                 estimates.append(odrv.axis0.encoder.pos_estimate)
                 currents.append(odrv.axis0.motor.current_control.Iq_measured)
@@ -55,5 +66,5 @@ def loop_data(odrv, kp_min=10, kp_max=40, iters=4, samples=40):
         estimates, inputs, currents, vels)
 
     clean = robo_pandas.clean_data(raw)
-    robo_pandas.csv_export(clean)
-    return raw
+    #robo_pandas.csv_export(clean)
+    return clean
