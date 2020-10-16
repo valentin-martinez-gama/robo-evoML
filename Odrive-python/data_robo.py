@@ -12,10 +12,10 @@ from control.trajectory import *
 from setup import calibrate
 from setup import configure
 
-def gains_iterator(odrv, kp_min=5, kp_max=100, kv_min=75, kv_max=400, ki_min=0, ki_max=1500/1000, iters=3):
+def gains_iterator(odrv, kp_min=5, kp_max=100, kv_min=100/1000, kv_max=400/1000, ki_min=0, ki_max=1500/1000, iters=5):
     opt_data = pd.DataFrame()
     # Make sure samples < trj(res)
-    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=.15, t2=.2, res=100)
+    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=.2, t2=.2, res=24)
 
     for i1 in range(0,iters):
         kp = kp_min + i1*(kp_max-kp_min)/(iters)
@@ -26,7 +26,7 @@ def gains_iterator(odrv, kp_min=5, kp_max=100, kv_min=75, kv_max=400, ki_min=0, 
             for i3 in range(0,iters):
                 ki = ki_min + i3*(ki_max-ki_min)/(iters)
 
-                configure.gains(odrv, gan_pos=kp, gan_vel=250/1000, gan_int_vel=ki)
+                configure.gains(odrv, gan_pos=kp, gan_vel=kv, gan_int_vel=ki)
                 time.sleep(.1)
 
                 traj_df = data_traj(odrv, traj, 1, 10)
