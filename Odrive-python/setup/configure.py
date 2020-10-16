@@ -44,7 +44,7 @@ def currents(odrv, limiteCorriente = 20, calibracion = 10):
         return odrv.reboot()
     return print("NEW current limits set")
 
-def gains(odrv, gan_pos=20, gan_vel= 160/1000.0, gan_int_vel = 300/1000.0):
+def gains(odrv, gan_pos=25, gan_vel= 250/1000.0, gan_int_vel = 400/1000.0):
     odrv.axis0.controller.config.pos_gain = gan_pos #[(turns/s) / turns]
     odrv.axis0.controller.config.vel_gain = gan_vel #[Nm/(turns/s)]
     odrv.axis0.controller.config.vel_integrator_gain = gan_int_vel #[Nm/((turns/s) * s)]
