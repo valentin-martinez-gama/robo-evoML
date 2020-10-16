@@ -51,7 +51,7 @@ def gains(odrv, gan_pos=20, gan_vel= 160/1000.0, gan_int_vel = 300/1000.0):
     odrv.axis1.controller.config.pos_gain = gan_pos #[(turns/s) / turns]
     odrv.axis1.controller.config.vel_gain = gan_vel #[Nm/(turns/s)]
     odrv.axis1.controller.config.vel_integrator_gain = gan_int_vel #[Nm/((turns/s) * s)]
-    return print("NEW gains set")
+    return print("NEW gains set --> Kp: {} Kpv: {} Kiv: {}".format(gan_pos,gan_vel,gan_int_vel))
 
 def trap_traj(odrv, vel_lim = 1, accel_lim = .5):
         odrv.axis0.trap_traj.config.vel_limit = vel_lim
