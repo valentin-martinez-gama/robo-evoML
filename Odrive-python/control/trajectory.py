@@ -2,7 +2,7 @@
 from sympy import *
 from math import ceil, pi
 
-def build_trajectory(pos1=0, pos2=pi, t1=.2, t2=.3, res=100):
+def build_trajectory(pos1=0, pos2=pi, t1=.5, t2=.5, res=100):
 
     out_T = t1/res
     ret_T = t2/res
