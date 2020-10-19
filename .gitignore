@@ -47,3 +47,6 @@ __pycache__/
 *.csv
 
 devTests/
+
+#OSx cache files
+*.DS_Store

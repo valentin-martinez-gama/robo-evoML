@@ -16,6 +16,7 @@ def gains_iterator(odrv, kp_min=80, kp_max=85, kv_min=100/1000, kv_max=400/1000,
     opt_data = pd.DataFrame()
     # Make sure samples < trj(res)
     traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=24)
+    data_traj_setup(odrv)
 
     for i1 in range(0,iters):
         kp = kp_min + i1*(kp_max-kp_min)/(iters)
@@ -38,12 +39,6 @@ def gains_iterator(odrv, kp_min=80, kp_max=85, kv_min=100/1000, kv_max=400/1000,
 
 
 def data_traj(odrv, traj, iters=1, samples=40):
-    robo.home(odrv)
-
-    configure.set_position_control(odrv)
-    odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
-    odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
-    time.sleep(.5)
 
     raw = robo_pandas.build_raw(samples)
     sample_interval = (len(traj["OUTBOUND"])+len(traj["RETURN"]))//samples
@@ -80,3 +75,11 @@ def data_traj(odrv, traj, iters=1, samples=40):
     clean = robo_pandas.clean_data(raw)
     #robo_pandas.csv_export(clean)
     return clean
+
+def data_traj_setup(odrv):
+
+    robo.home(odrv)
+    configure.set_position_control(odrv)
+    odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+    odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+    time.sleep(.5)
