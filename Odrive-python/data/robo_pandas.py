@@ -41,6 +41,11 @@ def clean_data(data):
 
     error_sum = abs(lag_error) + abs(ahead_error)
     masa = mean(curr_vel)
+    min_error = min(error_sum)
+    min_err_index = error_sum.tolist().index(min_error)
+    min_err_pos_gain = df.pos_gain[min_err_index]
+    min_err_vel_gain = df.vel_gain[min_err_index]
+    min_err_vel_integrator_gain = df.vel_integrator_gain[min_err_index]
 
     df = gains
     df.insert(4, "lag_error", lag_error)
@@ -50,6 +55,11 @@ def clean_data(data):
     df.insert(8, "current_sum", current_sum)
     df.insert(9, "curr_vel", curr_vel)
     df.insert(10, "masa", masa)
+    df.insert(11, "min_error", min_error)
+    df.insert(12, "min_err_index", min_err_index)
+    df.insert(13, "min_err_pos_gain", min_err_pos_gain)
+    df.insert(14, "min_err_vel_gain", min_err_vel_gain)
+    df.insert(15, "min_err_vel_integrator_gain", min_err_vel_integrator_gain)
     return df
 
 def export_raw(rawdf):
