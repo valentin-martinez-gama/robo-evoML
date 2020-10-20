@@ -62,6 +62,8 @@ def clean_data(data):
     df.insert(15, "min_err_vel_integrator_gain", min_err_vel_integrator_gain)
     return df
 
+"""
+# Revisar si esta funcion sirve de algo
 def export_raw(rawdf):
     df = pd.DataFrame()
     # Create columns to store data
@@ -89,6 +91,7 @@ def export_raw(rawdf):
         df.loc[len(df.index)] = row + vals
     csv_export(df)
     return df
+"""
 
 def csv_export(df):
     choice = input("Want to export DataFrame to CSV?: y/n ")
