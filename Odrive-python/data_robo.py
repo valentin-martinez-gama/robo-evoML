@@ -40,7 +40,7 @@ def gains_iterator(odrv, kp_min=80, kp_max=85, kv_min=100/1000, kv_max=400/1000,
     clean = robo_pandas.clean_data(raw)
     robo_pandas.csv_export(clean)
     print(robo_pandas.get_results(clean))
-    return clean
+    return(clean, top)
 
 def data_traj(odrv, traj, samples, raw, id=1):
 
