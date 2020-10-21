@@ -46,6 +46,11 @@ def clean_data(data):
     df.insert(9, "curr_vel", curr_vel)
     return df
 
+def get_results(clean):
+    top = clean[clean.error_sum == clean.error_sum.max()]
+    top.insert(10, "mass", np.mean(clean.loc[:, 'curr_vel']))
+    return top
+
 def export_raw(rawdf):
     df = pd.DataFrame()
     # Create columns to store data
