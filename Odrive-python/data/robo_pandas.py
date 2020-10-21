@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-def build_raw(samples):
+def build_raw():
     df = pd.DataFrame()
     # Create columns to store data
     df.insert(0, "Iteracion", pd.Series([], dtype=int))
