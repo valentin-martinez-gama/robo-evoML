@@ -12,12 +12,12 @@ from control.trajectory import *
 from setup import calibrate
 from setup import configure
 
-def gains_iterator(odrv, kp_min=80, kp_max=85, kv_min=100/1000, kv_max=400/1000, ki_min=0, ki_max=1500/1000, iters=2, samples=5):
+def gains_iterator(odrv, kp_min=80, kp_max=85, kv_min=100/1000, kv_max=400/1000, ki_min=0, ki_max=1500/1000, iters=2, samples=10):
 
     # Make sure samples < trj(res)
     data_traj_setup(odrv)
     raw = robo_pandas.build_raw()
-    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=10)
+    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=60)
     iteration =1
 
     for i1 in range(0,iters):
@@ -35,11 +35,10 @@ def gains_iterator(odrv, kp_min=80, kp_max=85, kv_min=100/1000, kv_max=400/1000,
                 raw = data_traj(odrv, traj, samples, raw, iteration)
                 #Hard_Step_DF?
                 #Idle_DF?
-                itertation += 1
+                iteration += 1
 
     clean = robo_pandas.clean_data(raw)
     #robo_pandas.csv_export(clean)
-    robo_pandas.csv_export(opt_data)
     return clean
 
 def data_traj(odrv, traj, samples, raw, id=1):
@@ -74,7 +73,7 @@ def data_traj(odrv, traj, samples, raw, id=1):
             currents.append(odrv.axis0.motor.current_control.Iq_measured)
             vels.append(odrv.axis0.encoder.vel_estimate)
 
-    raw = robo_pandas.add_raw(raw, it, odrv.axis0.controller.config.pos_gain, odrv.axis0.controller.config.vel_gain, odrv.axis0.controller.config.vel_integrator_gain,
+    raw = robo_pandas.add_raw(raw, id, odrv.axis0.controller.config.pos_gain, odrv.axis0.controller.config.vel_gain, odrv.axis0.controller.config.vel_integrator_gain,
     estimates, inputs, currents, vels)
     return raw
 

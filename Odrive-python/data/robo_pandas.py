@@ -12,7 +12,6 @@ def build_raw(samples):
     df.insert(5, "input_pos", pd.Series([], dtype=object))
     df.insert(6, "Iq_measured", pd.Series([], dtype=object))
     df.insert(7, "vel_estimate", pd.Series([], dtype=object))
-
     return df
 
 def add_raw(df, id, kp, kv, kvi, estimates, inputs, currents, vels):
@@ -28,11 +27,11 @@ def clean_data(data):
     vels = data.iloc[:, 7]
 
     #errors = ([np.subtract(inputs[i], estimates[i]) for i in range(inputs.size)])
-    sample_size = len(estimates[0])
+    sample_half = len(estimates[0])//2
     errors = list(map(lambda i,e: np.subtract(i,e), inputs, estimates))
-    lag_error = [sum(filter(lambda e: e>0, iter)) for iter in errors[0:sample_size]] + [sum(filter(lambda e: e<0, iter)) for iter in errors[sample_size:]]
-    ahead_error = [sum(filter(lambda e: e<0, iter)) for iter in errors[0:sample_size]] + [sum(filter(lambda e: e>0, iter)) for iter in errors[sample_size:]]
-
+    lag_error = [sum(filter(lambda e: e>0, iter)) for iter in errors[0:sample_half]] + [sum(filter(lambda e: e<0, iter)) for iter in errors[sample_half:]]
+    ahead_error = [sum(filter(lambda e: e<0, iter)) for iter in errors[0:sample_half]] + [sum(filter(lambda e: e>0, iter)) for iter in errors[sample_half:]]
+    err_sum = list(map(lambda l,a: np.add(np.abs(l), np.abs(a)), lag_error, ahead_error))
     overshoot_error = list(map(lambda i,e: max(e)-max(i), inputs, estimates))
 
     current_sum = [sum(np.abs(iter)) for iter in currents]
@@ -41,9 +40,10 @@ def clean_data(data):
     df = gains
     df.insert(4, "lag_error", lag_error)
     df.insert(5, "ahead_error", ahead_error)
-    df.insert(6, "overshoot_error", overshoot_error)
-    df.insert(7, "current_sum", current_sum)
-    df.insert(8, "curr_vel", curr_vel)
+    df.insert(6, "error_sum", err_sum)
+    df.insert(7, "overshoot_error", overshoot_error)
+    df.insert(8, "current_sum", current_sum)
+    df.insert(9, "curr_vel", curr_vel)
     return df
 
 def export_raw(rawdf):
