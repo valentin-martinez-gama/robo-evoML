@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from statistics import mean
 
 def build_raw():
     df = pd.DataFrame()
@@ -30,22 +31,39 @@ def clean_data(data):
     #errors = ([np.subtract(inputs[i], estimates[i]) for i in range(inputs.size)])
     sample_size = len(estimates[0])
     errors = list(map(lambda i,e: np.subtract(i,e), inputs, estimates))
-    lag_error = [sum(filter(lambda e: e>0, iter)) for iter in errors[0:sample_size]] + [sum(filter(lambda e: e<0, iter)) for iter in errors[sample_size:]]
-    ahead_error = [sum(filter(lambda e: e<0, iter)) for iter in errors[0:sample_size]] + [sum(filter(lambda e: e>0, iter)) for iter in errors[sample_size:]]
+    lag_error = [sum(filter(lambda e: e>0, iter)) for iter in errors[0:sample_size//2]] + [sum(filter(lambda e: e<0, iter)) for iter in errors[sample_size//2:]]
+    ahead_error = [sum(filter(lambda e: e<0, iter)) for iter in errors[0:sample_size//2]] + [sum(filter(lambda e: e>0, iter)) for iter in errors[sample_size//2:]]
 
     overshoot_error = list(map(lambda i,e: max(e)-max(i), inputs, estimates))
 
     current_sum = [sum(np.abs(iter)) for iter in currents]
     curr_vel = list(map(lambda c,v: np.mean(np.abs(c))/np.mean(np.abs(v)), currents, vels))
 
+    error_sum = abs(lag_error) + abs(ahead_error)
+    masa = mean(curr_vel)
+    min_error = min(error_sum)
+    min_err_index = error_sum.tolist().index(min_error)
+    min_err_pos_gain = df.pos_gain[min_err_index]
+    min_err_vel_gain = df.vel_gain[min_err_index]
+    min_err_vel_integrator_gain = df.vel_integrator_gain[min_err_index]
+
     df = gains
     df.insert(4, "lag_error", lag_error)
     df.insert(5, "ahead_error", ahead_error)
-    df.insert(6, "overshoot_error", overshoot_error)
-    df.insert(7, "current_sum", current_sum)
-    df.insert(8, "curr_vel", curr_vel)
+    df.insert(6, "error_sum", error_sum)
+    df.insert(7, "overshoot_error", overshoot_error)
+    df.insert(8, "current_sum", current_sum)
+    df.insert(9, "curr_vel", curr_vel)
+    df.insert(10, "masa", masa)
+    df.insert(11, "min_error", min_error)
+    df.insert(12, "min_err_index", min_err_index)
+    df.insert(13, "min_err_pos_gain", min_err_pos_gain)
+    df.insert(14, "min_err_vel_gain", min_err_vel_gain)
+    df.insert(15, "min_err_vel_integrator_gain", min_err_vel_integrator_gain)
     return df
 
+"""
+# Revisar si esta funcion sirve de algo
 def export_raw(rawdf):
     df = pd.DataFrame()
     # Create columns to store data
@@ -73,6 +91,7 @@ def export_raw(rawdf):
         df.loc[len(df.index)] = row + vals
     csv_export(df)
     return df
+"""
 
 def csv_export(df):
     choice = input("Want to export DataFrame to CSV?: y/n ")
