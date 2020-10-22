@@ -109,26 +109,24 @@ def trapezoidal(odrv, loop=False, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_in
     odrv.axis0.controller.input_pos = pos2
     odrv.axis1.controller.input_pos = pos2
     time.sleep(tot_time)
-    odrv.axis0.controller.input_pos = pos1
-    odrv.axis1.controller.input_pos = pos1
-    time.sleep(tot_time)
 
     if loop == True:
         try:
             while True:
-                odrv.axis0.controller.input_pos = pos2
-                odrv.axis1.controller.input_pos = pos2
-                time.sleep(tot_time)
                 odrv.axis0.controller.input_pos = pos1
                 odrv.axis1.controller.input_pos = pos1
                 time.sleep(tot_time)
+                odrv.axis0.controller.input_pos = pos2
+                odrv.axis1.controller.input_pos = pos2
+                time.sleep(tot_time)
         except KeyboardInterrupt:
-            odrv.axis0.controller.input_pos = pos1
-            odrv.axis1.controller.input_pos = pos1
-            time.sleep(.5)
-            odrv.axis0.controller.config.input_mode = 1
-            odrv.axis1.controller.config.input_mode = 1
             print("EXIT loop_trapezoidal")
+
+    odrv.axis0.controller.input_pos = pos1
+    odrv.axis1.controller.input_pos = pos1
+    time.sleep(.5)
+    odrv.axis0.controller.config.input_mode = 1
+    odrv.axis1.controller.config.input_mode = 1
     return"FIN Trapezoide"
 
 def hard(odrv, loop=False, pos1=0, pos2=.5, time_switch=.1):
