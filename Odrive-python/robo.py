@@ -4,11 +4,10 @@ import time
 import odrive
 from odrive.enums import *
 from odrive.utils import dump_errors
-from odrive.utils import start_liveplotter
 
 import control.trajectory as tj
-from setup import calibrate
-from setup import configure
+import setup.calibrate as calibrate
+import setup.configure as configure
 from setup.calibrate import wait_for_idle
 
 def start(odrv):

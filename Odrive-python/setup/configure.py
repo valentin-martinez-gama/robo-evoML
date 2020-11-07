@@ -29,7 +29,7 @@ def hardware(odrv):
     odrv.axis1.motor.config.torque_constant = 8.27/270
     return "DONE hardware"
 
-def currents(odrv, limiteCorriente = 20, calibracion = 10):
+def currents(odrv, limiteCorriente = 25, calibracion = 10):
     odrv.axis0.motor.config.calibration_current = calibracion
     odrv.axis1.motor.config.calibration_current = calibracion
 
@@ -63,7 +63,7 @@ def trap_traj(odrv, vel_lim = 1, accel_lim = .5):
         return print("NEW trap_traj set")
 
 
-def velocity_limit(odrv, limiteVelocidad = 12):
+def velocity_limit(odrv, limiteVelocidad = 14):
     odrv.axis0.controller.config.vel_limit = limiteVelocidad
     odrv.axis1.controller.config.vel_limit = limiteVelocidad
     return print("New velocity limits set")
