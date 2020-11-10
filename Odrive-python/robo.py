@@ -10,6 +10,9 @@ import setup.calibrate as calibrate
 import setup.configure as configure
 from setup.calibrate import wait_for_idle
 
+import data.timetest as timetest
+sleep_error = timetest.get_sleep_error()
+
 def start(odrv):
 
     if (odrv.axis0.encoder.config.pre_calibrated and odrv.axis1.encoder.config.pre_calibrated) != 1:
@@ -51,16 +54,15 @@ def trajectory(odrv, loop = False, trajectory=tj.build_trajectory()):
     configure.set_position_control(odrv)
     odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
     odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
-    time.sleep(.5)
 
     for p in trajectory["OUTBOUND"]:
         odrv.axis0.controller.input_pos = p
         odrv.axis1.controller.input_pos = p
-        time.sleep(trajectory["OUT_PERIOD"])
+        time.sleep(-sleep_error+trajectory["OUT_PERIOD"])
     for p in trajectory["RETURN"]:
         odrv.axis0.controller.input_pos = p
         odrv.axis1.controller.input_pos = p
-        time.sleep(trajectory["RET_PERIOD"])
+        time.sleep(-sleep_error+trajectory["RET_PERIOD"])
 
     if loop == True:
         try:
@@ -68,11 +70,11 @@ def trajectory(odrv, loop = False, trajectory=tj.build_trajectory()):
                 for p in trajectory["OUTBOUND"]:
                     odrv.axis0.controller.input_pos = p
                     odrv.axis1.controller.input_pos = p
-                    time.sleep(trajectory["OUT_PERIOD"])
+                    time.sleep(-sleep_error+trajectory["OUT_PERIOD"])
                 for p in trajectory["RETURN"]:
                     odrv.axis0.controller.input_pos = p
                     odrv.axis1.controller.input_pos = p
-                    time.sleep(trajectory["RET_PERIOD"])
+                    time.sleep(-sleep_error+trajectory["RET_PERIOD"])
         except KeyboardInterrupt:
             print("EXIT loop_trajectory")
 
@@ -135,23 +137,23 @@ def hard(odrv, loop=False, pos1=0, pos2=.5, time_switch=.1):
 
     odrv.axis0.controller.input_pos = pos1
     odrv.axis1.controller.input_pos = pos1
-    time.sleep(time_switch)
+    time.sleep(-sleep_error+time_switch)
     odrv.axis0.controller.input_pos = pos2
     odrv.axis1.controller.input_pos = pos2
-    time.sleep(time_switch)
+    time.sleep(-sleep_error+time_switch)
     odrv.axis0.controller.input_pos = pos1
     odrv.axis1.controller.input_pos = pos1
-    time.sleep(time_switch)
+    time.sleep(-sleep_error+time_switch)
 
     if loop == True:
         try:
             while True:
                 odrv.axis0.controller.input_pos = pos2
                 odrv.axis1.controller.input_pos = pos2
-                time.sleep(time_switch)
+                time.sleep(-sleep_error+time_switch)
                 odrv.axis0.controller.input_pos = pos1
                 odrv.axis1.controller.input_pos = pos1
-                time.sleep(time_switch)
+                time.sleep(-sleep_error+time_switch)
         except KeyboardInterrupt:
             odrv.axis0.controller.input_pos = pos1
             odrv.axis1.controller.input_pos = pos1
@@ -168,3 +170,7 @@ def home(odrv):
     odrv.axis0.controller.input_pos = 0
     odrv.axis1.controller.input_pos = 0
     return "HOME"
+
+def update_sleep_error():
+    global sleep_error
+    sleep_error = timetest.get_sleepleep_error()
