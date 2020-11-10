@@ -12,6 +12,9 @@ from setup.calibrate import wait_for_idle
 
 import data.timetest as timetest
 sleep_error = timetest.get_sleep_error()
+input_delay = .00124
+total_sleep_adjust = sleep_error+input_delay
+
 
 def start(odrv):
 
@@ -20,13 +23,14 @@ def start(odrv):
         dump_errors(odrv, True)
         first_time_calibration(odrv)
 
-    calibrate.set_encoder_zero(odrv)
-    time.sleep(1)
-
     configure.currents(odrv)
     configure.velocity_limit(odrv)
     configure.gains(odrv, gan_pos=25, gan_vel= 250/1000.0, gan_int_vel = 400/1000.0)
     configure.trap_traj(odrv, vel_lim = 6, accel_lim = 48)
+
+    calibrate.set_encoder_zero(odrv)
+    time.sleep(.2)
+    update_time_errors(odrv)
 
     return "DONE start robo"
 
@@ -58,11 +62,11 @@ def trajectory(odrv, loop = False, trajectory=tj.build_trajectory()):
     for p in trajectory["OUTBOUND"]:
         odrv.axis0.controller.input_pos = p
         odrv.axis1.controller.input_pos = p
-        time.sleep(-sleep_error+trajectory["OUT_PERIOD"])
+        time.sleep(-total_sleep_adjust+trajectory["OUT_PERIOD"])
     for p in trajectory["RETURN"]:
         odrv.axis0.controller.input_pos = p
         odrv.axis1.controller.input_pos = p
-        time.sleep(-sleep_error+trajectory["RET_PERIOD"])
+        time.sleep(-total_sleep_adjust+trajectory["RET_PERIOD"])
 
     if loop == True:
         try:
@@ -70,11 +74,11 @@ def trajectory(odrv, loop = False, trajectory=tj.build_trajectory()):
                 for p in trajectory["OUTBOUND"]:
                     odrv.axis0.controller.input_pos = p
                     odrv.axis1.controller.input_pos = p
-                    time.sleep(-sleep_error+trajectory["OUT_PERIOD"])
+                    time.sleep(-total_sleep_adjust+trajectory["OUT_PERIOD"])
                 for p in trajectory["RETURN"]:
                     odrv.axis0.controller.input_pos = p
                     odrv.axis1.controller.input_pos = p
-                    time.sleep(-sleep_error+trajectory["RET_PERIOD"])
+                    time.sleep(-total_sleep_adjust+trajectory["RET_PERIOD"])
         except KeyboardInterrupt:
             print("EXIT loop_trajectory")
 
@@ -137,23 +141,23 @@ def hard(odrv, loop=False, pos1=0, pos2=.5, time_switch=.1):
 
     odrv.axis0.controller.input_pos = pos1
     odrv.axis1.controller.input_pos = pos1
-    time.sleep(-sleep_error+time_switch)
+    time.sleep(-total_sleep_adjust+time_switch)
     odrv.axis0.controller.input_pos = pos2
     odrv.axis1.controller.input_pos = pos2
-    time.sleep(-sleep_error+time_switch)
+    time.sleep(-total_sleep_adjust+time_switch)
     odrv.axis0.controller.input_pos = pos1
     odrv.axis1.controller.input_pos = pos1
-    time.sleep(-sleep_error+time_switch)
+    time.sleep(-total_sleep_adjust+time_switch)
 
     if loop == True:
         try:
             while True:
                 odrv.axis0.controller.input_pos = pos2
                 odrv.axis1.controller.input_pos = pos2
-                time.sleep(-sleep_error+time_switch)
+                time.sleep(-total_sleep_adjust+time_switch)
                 odrv.axis0.controller.input_pos = pos1
                 odrv.axis1.controller.input_pos = pos1
-                time.sleep(-sleep_error+time_switch)
+                time.sleep(-total_sleep_adjust+time_switch)
         except KeyboardInterrupt:
             odrv.axis0.controller.input_pos = pos1
             odrv.axis1.controller.input_pos = pos1
@@ -171,6 +175,12 @@ def home(odrv):
     odrv.axis1.controller.input_pos = 0
     return "HOME"
 
-def update_sleep_error():
+def update_time_errors(odrv):
     global sleep_error
-    sleep_error = timetest.get_sleepleep_error()
+    sleep_error = timetest.get_sleep_error()
+    global input_delay
+    input_delay = timetest.get_input_pos_delay(odrv)
+    global total_sleep_adjust
+    total_sleep_adjust = sleep_error + input_delay
+    print("time.sleep() time compensation will be %0.5fs" % total_sleep_adjust)
+    return total_sleep_adjust
