@@ -2,6 +2,7 @@ import time
 
 import odrive
 from odrive.enums import *
+from odrive.utils import dump_errors
 
 import calibrate
 import configure
@@ -9,13 +10,14 @@ import move
 import plots
 import trajectory
 import timetest
-sleep_error = timetest.get_sleep_error()
+sleep_error = .0007
 input_delay = .00124
 data_delay = .0021
 input_sleep_adjust = sleep_error+input_delay
 
 def start(odrv):
 
+    dump_errors(odrv,True)
     if (odrv.axis0.encoder.config.pre_calibrated and odrv.axis1.encoder.config.pre_calibrated) != 1:
         print("System not calibrated - proceeding to calibration based on index search")
         calibrate.first_time_calibration(odrv)

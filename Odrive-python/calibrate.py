@@ -38,9 +38,6 @@ def first_time_calibration(odrv):
 
 def motor_encoder_initial(odrv_axis):
 
-    print("DUMPING ERRORS: before starting initial calibration.")
-    dump_errors(odrv_axis, True)
-
     # Motor Calibration
     if(odrv_axis.motor.config.pre_calibrated):
         print("This motor is precalibrated with phase_resistance = " + str(odrv_axis.motor.config.phase_resistance) + " and phase_inductance = " + str(odrv_axis.motor.config.phase_inductance))

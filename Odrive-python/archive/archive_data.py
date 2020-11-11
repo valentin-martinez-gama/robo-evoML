@@ -1,87 +1,106 @@
+from math import pi
+import time
 import pandas as pd
-import numpy as np
+import matplotlib.pyplot as plt
 
-def build_raw():
-    df = pd.DataFrame()
-    # Create columns to store data
-    df.insert(0, "Iteracion", pd.Series([], dtype=int))
-    df.insert(1, "pos_gain", pd.Series([], dtype=float))
-    df.insert(2, "vel_gain", pd.Series([], dtype=float))
-    df.insert(3, "vel_integrator_gain", pd.Series([], dtype=float))
-    df.insert(4, "pos_estimate", pd.Series([], dtype=object))
-    df.insert(5, "input_pos", pd.Series([], dtype=object))
-    df.insert(6, "Iq_measured", pd.Series([], dtype=object))
-    df.insert(7, "vel_estimate", pd.Series([], dtype=object))
-    return df
+import odrive
+from odrive.enums import *
+from control.trajectory import *
 
-def add_raw(df, id, kp, kv, kvi, estimates, inputs, currents, vels):
-    row = [id, kp, kv, kvi, estimates, inputs, currents, vels]
-    df.loc[len(df)] = row
-    return df
+import calibrate
+import configure
+import archive_pandas
+import trajectory
 
-def clean_data(data):
-    gains = data.iloc[:, :4]
-    estimates = data.iloc[:, 4]
-    inputs = data.iloc[:, 5]
-    currents = data.iloc[:, 6]
-    vels = data.iloc[:, 7]
+name_plot = ""
 
-    #errors = ([np.subtract(inputs[i], estimates[i]) for i in range(inputs.size)])
-    sample_half = len(estimates[0])//2
-    errors = list(map(lambda i,e: np.subtract(i,e), inputs, estimates))
-    lag_error = [sum(filter(lambda e: e>0, iter)) for iter in errors[0:sample_half]] + [sum(filter(lambda e: e<0, iter)) for iter in errors[sample_half:]]
-    ahead_error = [sum(filter(lambda e: e<0, iter)) for iter in errors[0:sample_half]] + [sum(filter(lambda e: e>0, iter)) for iter in errors[sample_half:]]
-    err_sum = list(map(lambda l,a: np.add(np.abs(l), np.abs(a)), lag_error, ahead_error))
-    overshoot_error = list(map(lambda i,e: max(e)-max(i), inputs, estimates))
+def gains_iterator(odrv, kp_min=25, kp_max=25, kv_min=250/1000, kv_max=250/1000, ki_min=0.4, ki_max=400/1000, iters=1, samples=10):
 
-    current_sum = [sum(np.abs(iter)) for iter in currents]
-    curr_vel = list(map(lambda c,v: np.mean(np.abs(c))/np.mean(np.abs(v)), currents, vels))
+    # Make sure samples < trj(res)
+    data_traj_setup(odrv)
+    raw = archive_pandas.build_raw()
+    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=100)
+    iteration =1
 
-    df = gains
-    df.insert(4, "lag_error", lag_error)
-    df.insert(5, "ahead_error", ahead_error)
-    df.insert(6, "error_sum", err_sum)
-    df.insert(7, "overshoot_error", overshoot_error)
-    df.insert(8, "current_sum", current_sum)
-    df.insert(9, "curr_vel", curr_vel)
-    return df
+    for i1 in range(0,iters):
+        kp = kp_min + i1*(kp_max-kp_min)/(iters)
 
-def get_results(clean):
-    top = clean[clean.error_sum == clean.error_sum.max()]
-    top.insert(10, "mass", np.mean(clean.loc[:, 'curr_vel']))
-    return top
+        for i2 in range(0,iters):
+            kv = kv_min + i2*(kv_max-kv_min)/(iters)
 
-def export_raw(rawdf):
-    df = pd.DataFrame()
-    # Create columns to store data
-    id = pd.Series([], dtype=int)
-    pos_gain = pd.Series([], dtype=float)
-    vel_gain = pd.Series([], dtype=float)
-    vel_integrator_gain = pd.Series([], dtype=float)
-    df.insert(0, "Iteracion", id)
-    df.insert(1, "pos_gain", pos_gain)
-    df.insert(2, "vel_gain", vel_gain)
-    df.insert(3, "vel_integrator_gain", vel_integrator_gain)
-    for i in range(len(rawdf.iloc[0,4])):
-        actual_pos = "pos_estimate" + str(i)
-        desired_pos = "input_pos" + str(i)
-        iq_measured = "iq_measured" + str(i)
-        vel_estimate = "vel_estimate" + str(i)
-        df.insert(i+4, actual_pos, pd.Series([], dtype=float))
-        df.insert(2*i+5, desired_pos, pd.Series([], dtype=float))
-        df.insert(3*i+6, iq_measured, pd.Series([], dtype=float))
-        df.insert(4*i+7, vel_estimate, pd.Series([], dtype=float))
+            for i3 in range(0,iters):
+                ki = ki_min + i3*(ki_max-ki_min)/(iters)
 
-    for e in range(len(rawdf)):
-        row  = rawdf.iloc[e,:4].values.tolist()
-        vals = [item for elem in rawdf.iloc[e,4:].values.tolist() for item in elem]
-        df.loc[len(df.index)] = row + vals
-    csv_export(df)
-    return df
+                configure.gains(odrv, gan_pos=kp, gan_vel=kv, gan_int_vel=ki)
+                time.sleep(.05)
 
-def csv_export(df):
-    choice = input("Want to export DataFrame to CSV?: y/n ")
+                raw, estimates, inputs = data_traj(odrv, traj, samples, raw, iteration)
+
+                #Hard_Step_DF?
+                #Idle_DF?
+                iteration += 1
+
+    length_data = []
+    for caca in range(len(estimates)):
+        length_data.append(caca)
+    plt.plot(length_data, estimates)
+    plt.plot(length_data, inputs)
+    plt.xlabel("Muestreo")
+    plt.ylabel("Posición")
+    plt.legend(["Posición Actual", "Referencia"])
+    choice = input("Want to export Plot?: y/n ")
+    global name_plot
     if choice == "y":
-        csv_name = input("Introduce el nombre con el que quieres guardar el archivo (SIN .csv): ")
-        df.to_csv(rf"{csv_name}.csv", index = False)
-    return
+        name_plot = input("Introduce el nombre con el que quieres guardar la imagen del plot: ")
+        #plot_name = "{}.png".format(name_plot)
+        plt.savefig(rf"{name_plot}.png")
+        plt.clf()
+    clean = archive_pandas.clean_data(raw)
+    archive_pandas.csv_export(clean)
+    top = archive_pandas.get_results(clean)
+    print(top)
+    return(clean, top)
+
+def data_traj(odrv, traj, samples, raw, id=1):
+
+    sample_interval = (len(traj["OUTBOUND"])+len(traj["RETURN"]))//samples
+    out_time = traj["OUT_PERIOD"]
+    ret_time = traj["RET_PERIOD"]
+    sample_diff = len(traj["OUTBOUND"])%sample_interval
+
+    estimates = []
+    inputs = []
+    currents = []
+    vels = []
+
+    for i, p in enumerate(traj["OUTBOUND"]):
+        odrv.axis0.controller.input_pos = p
+        odrv.axis1.controller.input_pos = p
+        time.sleep(out_time)
+        if ((i-1)%sample_interval == sample_interval-1):
+            inputs.append(p)
+            estimates.append(odrv.axis0.encoder.pos_estimate)
+            currents.append(odrv.axis0.motor.current_control.Iq_measured)
+            vels.append(odrv.axis0.encoder.vel_estimate)
+
+    for i, p in enumerate(traj["RETURN"]):
+        odrv.axis0.controller.input_pos = p
+        odrv.axis1.controller.input_pos = p
+        time.sleep(ret_time)
+        if ((i-1+sample_diff)%sample_interval == sample_interval-1):
+            inputs.append(p)
+            estimates.append(odrv.axis0.encoder.pos_estimate)
+            currents.append(odrv.axis0.motor.current_control.Iq_measured)
+            vels.append(odrv.axis0.encoder.vel_estimate)
+
+    raw = archive_pandas.add_raw(raw, id, odrv.axis0.controller.config.pos_gain, odrv.axis0.controller.config.vel_gain, odrv.axis0.controller.config.vel_integrator_gain,
+    estimates, inputs, currents, vels)
+
+    return raw, estimates, inputs
+
+def data_traj_setup(odrv):
+    robo.home(odrv)
+    configure.set_position_control(odrv)
+    odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+    odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+    time.sleep(.5)
