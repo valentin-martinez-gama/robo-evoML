@@ -13,8 +13,8 @@ from setup.calibrate import wait_for_idle
 import data.timetest as timetest
 sleep_error = timetest.get_sleep_error()
 input_delay = .00124
-total_sleep_adjust = sleep_error+input_delay
-
+data_delay = .0021
+input_sleep_adjust = sleep_error+input_delay
 
 def start(odrv):
 
@@ -52,12 +52,20 @@ def first_time_calibration(odrv):
 
     return print("DONE with initalization - Current State - Control Pos 3000")
 
+def update_time_errors(odrv):
+    global sleep_error
+    sleep_error = timetest.get_sleep_error()
+    global input_delay
+    input_delay = timetest.get_input_pos_delay(odrv)
+    global data_delay
+    data_delay = timetest.get_info_read_delay(odrv)
+    global input_sleep_adjust
+    input_sleep_adjust = sleep_error+input_delay
+    return input_sleep_adjust
 
 def trajectory(odrv, loop = False, trajectory=tj.build_trajectory()):
 
     configure.set_position_control(odrv)
-    odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
-    odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
 
     for p in trajectory["OUTBOUND"]:
         odrv.axis0.controller.input_pos = p
@@ -130,14 +138,12 @@ def trapezoidal(odrv, loop=False, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_in
     odrv.axis0.controller.input_pos = pos1
     odrv.axis1.controller.input_pos = pos1
     time.sleep(.5)
-    odrv.axis0.controller.config.input_mode = 1
-    odrv.axis1.controller.config.input_mode = 1
+    odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+    odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
     return"FIN Trapezoide"
 
 def hard(odrv, loop=False, pos1=0, pos2=.5, time_switch=.1):
     configure.set_position_control(odrv)
-    odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
-    odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
 
     odrv.axis0.controller.input_pos = pos1
     odrv.axis1.controller.input_pos = pos1
@@ -174,13 +180,3 @@ def home(odrv):
     odrv.axis0.controller.input_pos = 0
     odrv.axis1.controller.input_pos = 0
     return "HOME"
-
-def update_time_errors(odrv):
-    global sleep_error
-    sleep_error = timetest.get_sleep_error()
-    global input_delay
-    input_delay = timetest.get_input_pos_delay(odrv)
-    global total_sleep_adjust
-    total_sleep_adjust = sleep_error + input_delay
-    print("time.sleep() time compensation will be %0.5fs" % total_sleep_adjust)
-    return total_sleep_adjust
