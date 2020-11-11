@@ -5,7 +5,7 @@ import odrive
 from odrive.enums import *
 from odrive.utils import dump_errors
 
-from .configure import set_startup_procedure
+from configure import set_startup_procedure
 
 
 def check_error(odrv_axis, message):
@@ -19,10 +19,27 @@ def wait_for_idle(odrv_axis):
         time.sleep(0.1)
     return
 
+def first_time_calibration(odrv):
+
+    configure.hardware(odrv)
+    configure.currents(odrv)
+    configure.velocity_limit(odrv)
+    configure.gains(odrv)
+    time.sleep(.5)
+
+    calibrate.motor_encoder_initial(odrv.axis0)
+    time.sleep(2)
+    calibrate.motor_encoder_initial(odrv.axis1)
+    time.sleep(2)
+
+    configure.export_config(odrv, "configs/roboInicial.json")
+    odrv.save_configuration()
+    print("DONE with first_time_calibration")
 
 def motor_encoder_initial(odrv_axis):
 
-    check_error(odrv_axis, "ERROR: error found before starting initial calibration.")
+    print("DUMPING ERRORS: before starting initial calibration.")
+    dump_errors(odrv_axis, True)
 
     # Motor Calibration
     if(odrv_axis.motor.config.pre_calibrated):

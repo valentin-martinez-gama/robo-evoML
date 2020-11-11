@@ -3,7 +3,7 @@ if __name__ == '__main__':
     import shutil
     shutil.copy(__file__, 'env/Lib/site-packages/odrive/roboDrive.py')
 
-import utils
+import odrive.utils as utils
 
 def pos_plotter(odrvAxis):
      utils.start_liveplotter(lambda: [odrvAxis.encoder.pos_estimate,

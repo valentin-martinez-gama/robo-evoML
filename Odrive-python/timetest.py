@@ -1,7 +1,7 @@
 import time
 from math import floor, log, ceil
 
-import control.trajectory as trajectory
+import trajectory
 
 def check_sleep(amount):
     start = time.perf_counter()
@@ -20,7 +20,7 @@ def get_sleep_error(mint=1, maxt=5+1, tinter=1):
     print("Average time.sleep() error is %0.5fs" % sleep_err)
     return sleep_err
 
-def get_input_pos_delay(odrv, iters=100):
+def get_input_pos_delay(odrv, iters=50):
     delays = []
     last = max(51, iters)
     step = max(floor((last-1)/iters), 1)
