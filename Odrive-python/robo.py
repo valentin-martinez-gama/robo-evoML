@@ -33,11 +33,11 @@ def start(odrv):
 
     return "DONE start robo"
 
-def update_time_errors(odrv):
+def update_time_errors(odrv, samples=100):
     global sleep_error, input_delay, data_delay, input_sleep_adjust
     sleep_error = timetest.get_sleep_error()
-    input_delay = timetest.get_input_pos_delay(odrv)
-    data_delay = timetest.get_info_read_delay(odrv)
+    input_delay = timetest.get_input_pos_delay(odrv, samples)
+    data_delay = timetest.get_info_read_delay(odrv, samples)
     input_sleep_adjust = sleep_error+input_delay
     return input_sleep_adjust
 

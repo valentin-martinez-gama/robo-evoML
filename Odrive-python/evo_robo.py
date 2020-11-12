@@ -14,13 +14,13 @@ import trajectory
 
 ### DESCONTAR EL TIMEPO X OPERACION EN CADA UNA
 traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=100)
-samples = 50
+samples = 100
 num_individuals = 5
 num_generations = 1
 
 def evo_gains(odrv):
 
-    #robo.start(odrv)
+    robo.update_time_errors(odrv, samples)
 
     class Individual:
         def __init__(self, generation, id, gains):

@@ -17,17 +17,17 @@ def get_sleep_error(mint=1, maxt=5+1, tinter=1):
         errs.append(error)
 
     sleep_err = sum(errs)/len(errs)/1000
-    print("Average time.sleep() error is %0.5fs" % sleep_err)
+    print("Average time.sleep() error is %0.5fms" % (sleep_err*1000))
     return sleep_err
 
-def get_input_pos_delay(odrv, iters=50):
+def get_input_pos_delay(odrv, iters=100):
     delays = []
     last = max(51, iters)
     step = max(floor((last-1)/iters), 1)
     midpoint = round(last/2)
     magnitude = ceil(log(iters,10))
 
-    outbound = [i/10**magnitude for i in range(0, last, step*2)]
+    outbound = [i/20**magnitude for i in range(0, last, step*2)]
     ret = list(outbound)
     ret.reverse()
     points = (outbound+ret)
@@ -44,10 +44,10 @@ def get_input_pos_delay(odrv, iters=50):
     odrv.axis1.controller.input_pos = 0
 
     input_del = sum(delays)/len(delays)
-    print("Average input_pos execution time is %0.5fms" % input_del)
+    print("Average input_pos execution time is %0.5fms" % (input_del*1000))
     return input_del
 
-def get_info_read_delay(odrv, iters=25):
+def get_info_read_delay(odrv, iters=100):
     traj = trajectory.build_trajectory()
 
     sample_interval = (len(traj["OUTBOUND"])+len(traj["RETURN"]))//iters
@@ -90,5 +90,5 @@ def get_info_read_delay(odrv, iters=25):
             delays.append(end-start)
 
     read_del = sum(delays)/len(delays)
-    print("Average read_info execution time is %0.5fms" % read_del)
+    print("Average read_info execution time is %0.5fms" % (read_del*1000))
     return read_del
