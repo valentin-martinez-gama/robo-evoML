@@ -13,11 +13,11 @@ def get_sleep_error(mint=2, maxt=4+1, tinter=1):
     errs = []
     for sleep_time in range(mint, maxt, tinter):
         error = sum(check_sleep(sleep_time/1000)-sleep_time/1000 for i in range(100))*8
-        print("Requested sleep time is %0.3fms" % (sleep_time/1))
+        #print("Requested sleep time is %0.3fms" % (sleep_time/1))
         errs.append(error)
 
     sleep_err = sum(errs)/len(errs)/1000
-    print("Average time.sleep() error is %0.5fms" % (sleep_err*1000))
+    #print("Average time.sleep() error is %0.5fms" % (sleep_err*1000))
     return sleep_err
 
 def get_input_pos_delay(odrv, iters=100):
@@ -40,7 +40,7 @@ def get_input_pos_delay(odrv, iters=100):
     odrv.axis1.controller.input_pos = 0
 
     input_del = sum(delays)/len(delays)
-    print("Average input_pos execution time is %0.5fms" % (input_del*1000))
+    #print("Average input_pos execution time is %0.5fms" % (input_del*1000))
     return input_del
 
 def get_info_read_delay(odrv, iters=100):
@@ -75,5 +75,5 @@ def get_info_read_delay(odrv, iters=100):
     odrv.axis1.controller.input_pos = 0
 
     read_del = sum(delays)/len(delays)
-    print("Average read_info execution time is %0.5fms" % (read_del*1000))
+    #print("Average read_info execution time is %0.5fms" % (read_del*1000))
     return read_del

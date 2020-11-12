@@ -13,27 +13,30 @@ import calibrate
 import configure
 import trajectory
 ### EXECUTION TIME TOLERANCES
-exec_tolerance = .06
+exec_tolerance = .075
 reset_delays = 5
 tolerance_fails = 0
 samples_error_test = 50
 
 ### SAMPLING AND TRAJECTORY
 samples = 150
-traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=samples)
+traj = 0
+runs = 3
 
 ### VIBRATION TEST TOLERANCES ++ = MORE FLEXIBILITY
+test_time = .2
 num_tests = 5
-histeresis_tol = .008
+histeresis_tol = .02
+fail_penalty = 1.5
 
 ### EVOLUTONARY PARAMETERS
 max_generations = 3
 inf_cycle = False
 
-pop_size = 8
+pop_size = 6
 elites = 2
-survivors = 4
-mutts = 3
+survivors = 3
+mutts = 1
 mutt_rate = .1
 
 ### SAFETY LIMITS
@@ -47,14 +50,18 @@ def check_gains(proposed):
 
 
 def evo_gains(odrv):
+    robo.start(odrv)
     global traj
-    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=samples)
-
+    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.75, t2=0.75, res=samples)
     class Individual:
         def __init__(self, generation, gains):
             self.generation = generation
             self.gains = gains
-            self.score = get_error_score(odrv, gains, traj)
+            configure.gains(odrv, *gains)
+            errs = get_errors(odrv, traj)
+            self.traj_error = errs[0]
+            self.stat_error = errs[1]
+            self.score = 1*self.traj_error+1*self.stat_error
 
     population = []
     #Initiate population randomly
@@ -107,22 +114,39 @@ def create_mutt(origin):
 
     return check_gains(mutt_gains)
 
-def get_error_score(odrv, gains, traj):
-    configure.gains(odrv, *gains)
-    time.sleep(.05)
+def get_errors(odrv, traj):
+    trajs = []
+    vibs = []
+    for _ in range(runs):
+        time.sleep(.05)
+        trajs.append(traj_error(odrv, traj))
+        time.sleep(.025)
+        vibs.append(vibration_error(odrv))
+    return (np.mean(trajs), np.mean(vibs))
+
+def traj_error(odrv, traj):
 
     t_df = pd.Series(data=performance_traj(odrv, traj, samples))
     error = sum(np.square(np.subtract(t_df.at["input_pos"],t_df.at["pos_estimate_a0"]))) + sum(np.square(np.subtract(t_df.at["input_pos"],t_df.at["pos_estimate_a1"])))
 
-    time.sleep(.025)
-    ok = vibration_test(odrv)
-    if ok[0]:
-        pass
-    else:
-        error = 100+ok[1]
     #print("Quad error on exec = " +str(error))
     return error
 
+
+def vibration_error(odrv, vib_tol=histeresis_tol, t_time=test_time, rate=100):
+
+    vibs = []
+    tests = num_tests
+    for i in range(0, round(rate*t_time)):
+        vibs.append(odrv.axis0.encoder.pos_estimate)
+        vibs.append(odrv.axis1.encoder.pos_estimate)
+        time.sleep(float(1/rate-robo.input_sleep_adjust))
+    vibs.sort()
+    histeresis = abs(np.mean(vibs[:tests]))+abs(np.mean(vibs[-tests:]))
+    if histeresis > vib_tol:
+        return histeresis*fail_penalty
+    else:
+        return histeresis
 
 def performance_traj(odrv, traj, samples=0):
     if samples == 0:
@@ -182,25 +206,11 @@ def performance_traj(odrv, traj, samples=0):
     "Iq_setpoint_a0":currents_a0,
     "Iq_setpoint_a1":currents_a1}
 
-def vibration_test(odrv, vib_tol=histeresis_tol, test_time=.2, rate=100):
-    vibs = []
-    tests = num_tests
-    for i in range(0, round(rate*test_time)):
-        vibs.append(odrv.axis0.encoder.pos_estimate)
-        vibs.append(odrv.axis1.encoder.pos_estimate)
-        time.sleep(float(1/rate-robo.input_sleep_adjust))
-    vibs.sort()
-    histeresis = abs(np.mean(vibs[:tests]))+abs(np.mean(vibs[-tests:]))
-    if histeresis > vib_tol:
-        return (False, histeresis)
-    else:
-        return (True, histeresis)
-
 def print_results(pop):
     for i in pop:
-        print(i.generation)
-        print(i.gains)
-        print(i.score)
+        print(i.generation,round(i.score,5),[round(g,3) for g in i.gains], sep="   ")
+        print(round(i.traj_error,5),round(i.stat_error,5), sep=" + ")
+
 '''
 def build_evo_raw():
     df = pd.DataFrame()
