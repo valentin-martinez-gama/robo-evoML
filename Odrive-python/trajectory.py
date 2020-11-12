@@ -16,7 +16,7 @@ def build_trajectory(pos1=0, pos2=pi, t1=.5, t2=.5, res=100):
             "OUT_PERIOD":out_T,
             "RET_PERIOD":ret_T}
 
-def pol_trajectory(time, parameters, T = .001):
+def pol_trajectory(time, parameters, T):
 
     matrixSize = len(parameters)
     tfin = Symbol('tfin')
@@ -48,6 +48,6 @@ def pol_trajectory(time, parameters, T = .001):
 
     setpointsArray = []
     setpoint = lambdify(t, polinomial, "numpy")
-    for n in range(0,ceil(time/T)):
+    for n in range(1,ceil(time/T)+1):
         setpointsArray.append(setpoint(n*T))
     return setpointsArray

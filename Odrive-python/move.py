@@ -103,28 +103,28 @@ def trapezoidal(odrv, loop=False, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_in
     odrv.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
     return"FIN Trapezoide"
 
-def hard(odrv, loop=False, pos1=0, pos2=.5, time_switch=.1):
+def hard(odrv, loop=False, pos1=0, pos2=.5, t_switch=.1):
     configure.set_position_control(odrv)
 
     odrv.axis0.controller.input_pos = pos1
     odrv.axis1.controller.input_pos = pos1
-    time.sleep(-input_sleep_adjust+time_switch)
+    time.sleep(-input_sleep_adjust+t_switch)
     odrv.axis0.controller.input_pos = pos2
     odrv.axis1.controller.input_pos = pos2
-    time.sleep(-input_sleep_adjust+time_switch)
+    time.sleep(-input_sleep_adjust+t_switch)
     odrv.axis0.controller.input_pos = pos1
     odrv.axis1.controller.input_pos = pos1
-    time.sleep(-input_sleep_adjust+time_switch)
+    time.sleep(-input_sleep_adjust+t_switch)
 
     if loop == True:
         try:
             while True:
                 odrv.axis0.controller.input_pos = pos2
                 odrv.axis1.controller.input_pos = pos2
-                time.sleep(-input_sleep_adjust+time_switch)
+                time.sleep(-input_sleep_adjust+t_switch)
                 odrv.axis0.controller.input_pos = pos1
                 odrv.axis1.controller.input_pos = pos1
-                time.sleep(-input_sleep_adjust+time_switch)
+                time.sleep(-input_sleep_adjust+t_switch)
         except KeyboardInterrupt:
             odrv.axis0.controller.input_pos = pos1
             odrv.axis1.controller.input_pos = pos1

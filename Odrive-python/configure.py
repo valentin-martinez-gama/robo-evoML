@@ -29,7 +29,7 @@ def hardware(odrv):
     odrv.axis1.motor.config.torque_constant = 8.27/270
     return "DONE hardware"
 
-def currents(odrv, limiteCorriente = 25, calibracion = 10):
+def currents(odrv, limiteCorriente = 40, calibracion = 10):
     odrv.axis0.motor.config.calibration_current = calibracion
     odrv.axis1.motor.config.calibration_current = calibracion
 

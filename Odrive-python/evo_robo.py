@@ -1,6 +1,7 @@
 from math import pi
 import time
 from random import uniform as r_uni
+from random import triangular as r_tri
 
 import pandas as pd
 import numpy as np
@@ -11,47 +12,64 @@ import robo
 import calibrate
 import configure
 import trajectory
-
+### EXECUTION TIME TOLERANCES
 exec_tolerance = .1
 reset_delays = 5
 tolerance_fails = 0
 
-### DESCONTAR EL TIMEPO X OPERACION EN CADA UNA
-samples = 100
+### SAMPLING AND TRAJECTORY
+samples = 120
 traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=samples)
+
+### VIBRATION TEST TOLERANCES ++ = MORE FLEXIBILITY
+num_tests = 6
+histeresis_tol = .0025
+
+### EVOLUTONARY PARAMETERS
 num_individuals = 5
 num_generations = 1
+
 
 def evo_gains(odrv):
     global traj
     traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=samples)
-    robo.update_time_errors(odrv, samples)
 
     class Individual:
         def __init__(self, generation, id, gains):
             self.generation = generation
             self.id = generation*1000+id
             self.gains = gains
-            self.error = get_error_score(odrv, gains, traj)
+            self.score = get_error_score(odrv, gains, traj)
 
     population = []
     #Initiate population randomly
-    for n in range(1, num_individuals+1):
-        population.append(Individual(0, n, (r_uni(10,70), r_uni(1/10,3/10), r_uni(0,.75))))
+    for n in range(0, num_individuals):
+        kp = r_uni(20,140)
+        #ASEGURAR QUE NO SE PASE LA FRONTERA DE PARETO DE VIBRACIONES VIOLENTAS
+        kv = min(r_uni(.06,.2)+r_tri(0,.8,0.01), -.001*kp+.3)
+        kvi = min(r_tri(0,1.4,.3), max(80,kp)/140)
+        population.append(Individual(0, n+1, (kp, kv, kvi)))
 
     configure.gains(odrv)
+
+    population.sort(key=lambda p: p.score)
     return population
 
 
 def get_error_score(odrv, gains, traj):
     configure.gains(odrv, *gains)
-    ok = 1 #test_vibration()
-    if ok:
-        t_df = pd.Series(data=performance_traj(odrv, traj, samples))
-        error = sum(np.square(np.subtract(t_df.at["input_pos"],t_df.at["pos_estimate_a0"]))) + sum(np.square(np.subtract(t_df.at["input_pos"],t_df.at["pos_estimate_a1"])))
-        print("Quad error on exec = " +str(error) +'\n')
+    time.sleep(.05)
+
+    t_df = pd.Series(data=performance_traj(odrv, traj, samples))
+    error = sum(np.square(np.subtract(t_df.at["input_pos"],t_df.at["pos_estimate_a0"]))) + sum(np.square(np.subtract(t_df.at["input_pos"],t_df.at["pos_estimate_a1"])))
+
+    time.sleep(.25)
+    ok = vibration_test(odrv)
+    if ok[0]:
+        pass
     else:
-        error = 0
+        error = 100+ok[1]
+    print("Quad error on exec = " +str(error) +'\n')
     return error
 
 
@@ -112,6 +130,20 @@ def performance_traj(odrv, traj, samples=0):
     "pos_estimate_a1":estimates_a1,
     "Iq_setpoint_a0":currents_a0,
     "Iq_setpoint_a1":currents_a1}
+
+def vibration_test(odrv, vib_tol=histeresis_tol, test_time=.2, rate=100):
+    vibs = []
+    tests = num_tests
+    for i in range(0, round(rate*test_time)):
+        vibs.append(odrv.axis0.encoder.pos_estimate)
+        vibs.append(odrv.axis1.encoder.pos_estimate)
+        time.sleep(float(1/rate-robo.input_sleep_adjust))
+    vibs.sort()
+    histeresis = abs(np.mean(vibs[:tests]))+abs(np.mean(vibs[-tests:]))
+    if histeresis > vib_tol:
+        return (False, histeresis)
+    else:
+        return (True, histeresis)
 
 '''
 def build_evo_raw():

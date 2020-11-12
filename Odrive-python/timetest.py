@@ -9,7 +9,7 @@ def check_sleep(amount):
     end = time.perf_counter()
     return end-start
 
-def get_sleep_error(mint=1, maxt=5+1, tinter=1):
+def get_sleep_error(mint=1, maxt=4+1, tinter=1):
     errs = []
     for sleep_time in range(mint, maxt, tinter):
         error = sum(check_sleep(sleep_time/1000)-sleep_time/1000 for i in range(100))*8
