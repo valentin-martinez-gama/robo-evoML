@@ -16,4 +16,4 @@ def change_plot_rate(new_data_rate, new_plot_rate, new_num_samples):
     utils.plot_rate = new_plot_rate
     utils.num_samples = new_num_samples
 
-change_plot_rate(200, 100, 1000)
+change_plot_rate(100, 100, 500)

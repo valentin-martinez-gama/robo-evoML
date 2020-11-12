@@ -45,7 +45,7 @@ def get_input_pos_delay(odrv, iters=100):
 
 def get_info_read_delay(odrv, iters=100):
 
-    outbound = [i*.25/(iters//2) for i in range(0, iters//2)]
+    outbound = [i*(-.25)/(iters//2) for i in range(0, iters//2)]
     ret = list(outbound)
     ret.reverse()
     points = (outbound+ret)
@@ -61,19 +61,19 @@ def get_info_read_delay(odrv, iters=100):
         odrv.axis0.controller.input_pos = p
         odrv.axis1.controller.input_pos = p
         time.sleep(.01)
-        if ((i-1)%sample_interval == sample_interval-1):
-            start = time.perf_counter()
-            inputs.append(p)
-            estimates_a0.append(odrv.axis0.encoder.pos_estimate)
-            currents_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
-            estimates_a1.append(odrv.axis1.encoder.pos_estimate)
-            currents_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
-            end = time.perf_counter()
-            delays.append(end-start)
+
+        start = time.perf_counter()
+        inputs.append(p)
+        estimates_a0.append(odrv.axis0.encoder.pos_estimate)
+        currents_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
+        estimates_a1.append(odrv.axis1.encoder.pos_estimate)
+        currents_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
+        end = time.perf_counter()
+        delays.append(end-start)
 
     odrv.axis0.controller.input_pos = 0
     odrv.axis1.controller.input_pos = 0
-    
+
     read_del = sum(delays)/len(delays)
     print("Average read_info execution time is %0.5fms" % (read_del*1000))
     return read_del
