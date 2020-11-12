@@ -2,7 +2,7 @@ from math import pi
 import time
 from random import uniform as r_uni
 from random import triangular as r_tri
-
+from random import choice as r_choice
 import pandas as pd
 import numpy as np
 import odrive
@@ -16,6 +16,7 @@ import trajectory
 exec_tolerance = .1
 reset_delays = 5
 tolerance_fails = 0
+samples_error_test = 50
 
 ### SAMPLING AND TRAJECTORY
 samples = 120
@@ -23,38 +24,79 @@ traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=samples)
 
 ### VIBRATION TEST TOLERANCES ++ = MORE FLEXIBILITY
 num_tests = 6
-histeresis_tol = .0025
+histeresis_tol = .0006
 
 ### EVOLUTONARY PARAMETERS
-num_individuals = 5
-num_generations = 1
+max_generations = 5
+inf_cycle = False
 
+pop_size = 10
+elites = 3
+survivors = 5
+mutts = 4
+mutt_rate = .1
+
+### SAFETY LIMITS
+k_range = ((10, 150), (.05, .32), (0, 1.2))
+kp_kv_frontier = lambda kp: -.001*kp+.3
+kp_kvi_frontier =lambda kp: max(80,kp)/140
 
 def evo_gains(odrv):
     global traj
     traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.5, t2=0.5, res=samples)
 
     class Individual:
-        def __init__(self, generation, id, gains):
+        def __init__(self, generation, gains):
             self.generation = generation
-            self.id = generation*1000+id
             self.gains = gains
             self.score = get_error_score(odrv, gains, traj)
 
     population = []
     #Initiate population randomly
-    for n in range(0, num_individuals):
+    print("*** Creating 1st generation ***")
+    generation = 0
+    for n in range(0, pop_size):
         kp = r_uni(20,140)
         #ASEGURAR QUE NO SE PASE LA FRONTERA DE PARETO DE VIBRACIONES VIOLENTAS
-        kv = min(r_uni(.06,.2)+r_tri(0,.8,0.01), -.001*kp+.3)
-        kvi = min(r_tri(0,1.4,.3), max(80,kp)/140)
-        population.append(Individual(0, n+1, (kp, kv, kvi)))
+        kv = min(r_uni(.06,.2)+r_tri(0,.8,0.01), kp_kv_frontier(kp))
+        kvi = min(r_tri(0,1.4,.3), kp_kvi_frontier(kp))
+        population.append(Individual(0, (kp, kv, kvi)))
 
-    configure.gains(odrv)
+    while (generation <= max_generations) or inf_cycle:
+        generation += 1
+        print("*** Creating "+str(generation)+ " generation ***")
+        population.sort(key=lambda p: p.score)
+        parents = population[:survivors]
+        del population[elites:]
+
+        n = 0
+        while len(population) < pop_size:
+            p1 = parents[n%survivors]
+            p2 = r_choice(parents)
+            cross_parents(p1, p2, generation, population, Individual)
+            n +=1
+
+        population.sort(key=lambda p: p.score)
+        del population[-mutts:]
+        for _ in range(mutts):
+            mutt = r_choice(population)
+            mutt_gains = [g*r_uni(0,mutt_rate) for g in mutt.gains]
+            population.append(Individual(generation, tuple(mutt_gains)))
 
     population.sort(key=lambda p: p.score)
     return population
 
+def cross_parents(p1, p2, gen, pop, Ind_class):
+
+    cross_rate = r_uni(0,(1+mutt_rate))
+    ch_gains = np.add([g1*cross_rate for g1 in p1.gains],[g2*(1-cross_rate) for g2 in p2.gains])
+
+    for i,g in enumerate(ch_gains):
+        g = max( min(g, k_range[i][0]), k_range[i][1])
+
+    pop.append(Ind_class(gen, tuple(ch_gains)))
+
+def mutate(pop, Ind_class):
 
 def get_error_score(odrv, gains, traj):
     configure.gains(odrv, *gains)
@@ -121,7 +163,7 @@ def performance_traj(odrv, traj, samples=0):
             global tolerance_fails
             tolerance_fails += 1
             if tolerance_fails >= reset_delays:
-                robo.update_time_errors(odrv, samples)
+                robo.update_time_errors(odrv, samples_error_test)
                 tolerance_fails = 0
 
     #End While not Succes loop
