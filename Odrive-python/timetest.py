@@ -22,12 +22,8 @@ def get_sleep_error(mint=1, maxt=5+1, tinter=1):
 
 def get_input_pos_delay(odrv, iters=100):
     delays = []
-    last = max(51, iters)
-    step = max(floor((last-1)/iters), 1)
-    midpoint = round(last/2)
-    magnitude = ceil(log(iters,10))
 
-    outbound = [i/20**magnitude for i in range(0, last, step*2)]
+    outbound = [i*.5/(iters//2) for i in range(0, iters//2)]
     ret = list(outbound)
     ret.reverse()
     points = (outbound+ret)
@@ -48,7 +44,7 @@ def get_input_pos_delay(odrv, iters=100):
     return input_del
 
 def get_info_read_delay(odrv, iters=100):
-    traj = trajectory.build_trajectory()
+    traj = trajectory.build_trajectory(res=iters)
 
     sample_interval = (len(traj["OUTBOUND"])+len(traj["RETURN"]))//iters
     out_time = traj["OUT_PERIOD"]
