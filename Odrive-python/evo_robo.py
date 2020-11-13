@@ -5,6 +5,8 @@ from random import triangular as r_tri
 from random import choice as r_choice
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+
 import odrive
 from odrive.enums import *
 
@@ -19,9 +21,9 @@ tolerance_fails = 0
 samples_error_test = 50
 
 ### SAMPLING AND TRAJECTORY
-samples = 150
+samples = 100
 traj = 0
-runs = 3
+runs = 2
 
 ### VIBRATION TEST TOLERANCES ++ = MORE FLEXIBILITY
 test_time = .2
@@ -30,13 +32,14 @@ histeresis_tol = .02
 fail_penalty = 1.5
 
 ### EVOLUTONARY PARAMETERS
-max_generations = 3
+max_generations = 10
 inf_cycle = False
 
-pop_size = 6
+population = []
+pop_size = 10
 elites = 2
-survivors = 3
-mutts = 1
+survivors = 5
+mutts = 2
 mutt_rate = .1
 
 ### SAFETY LIMITS
@@ -58,12 +61,15 @@ def evo_gains(odrv):
             self.generation = generation
             self.gains = gains
             configure.gains(odrv, *gains)
-            errs = get_errors(odrv, traj)
+            errs = get_errors_data(odrv, traj)
             self.traj_error = errs[0]
             self.stat_error = errs[1]
             self.score = 1*self.traj_error+1*self.stat_error
-
+            self.data = errs[2]
+    global population
     population = []
+    global winners
+    winners = []
     #Initiate population randomly
     print("*** Creating 0 generation ***")
     generation = 0
@@ -75,30 +81,33 @@ def evo_gains(odrv):
         population.append(Individual(0, check_gains([kp, kv, kvi])))
     population.sort(key=lambda p: p.score)
     print_results(population)
+    win = population[0]
+    winners.append(win)
 
-    while (generation <= max_generations) or inf_cycle:
+    while (generation < max_generations) or inf_cycle:
         generation += 1
         print('\n'+"*** Creating "+str(generation)+ " generation ***")
         parents = population[:survivors]
         del population[elites:]
 
         n = 0
-        while len(population) < pop_size:
+        while len(population) < (pop_size - mutts):
             p1 = parents[n%survivors]
             p2 = r_choice(parents)
             population.append(Individual(generation, cross_parents(p1, p2)))
             n +=1
-
-        population.sort(key=lambda p: p.score)
-        del population[-mutts:]
         for _ in range(mutts):
             mutt = r_choice(population)
             population.append(Individual(generation, create_mutt(mutt)))
 
         population.sort(key=lambda p: p.score)
         print_results(population)
+        if (population[0] != win):
+            win = population[0]
+            winners.append(win)
 
     population.sort(key=lambda p: p.score)
+    print_winners()
     return population
 
 def cross_parents(p1, p2):
@@ -114,23 +123,24 @@ def create_mutt(origin):
 
     return check_gains(mutt_gains)
 
-def get_errors(odrv, traj):
+def get_errors_data(odrv, traj):
     trajs = []
     vibs = []
     for _ in range(runs):
         time.sleep(.05)
-        trajs.append(traj_error(odrv, traj))
+        data_trajectory = trajectory_error(odrv, traj)
+        trajs.append(data_trajectory[0])
         time.sleep(.025)
         vibs.append(vibration_error(odrv))
-    return (np.mean(trajs), np.mean(vibs))
+    return (np.mean(trajs), np.mean(vibs), data_trajectory[1])
 
-def traj_error(odrv, traj):
-
-    t_df = pd.Series(data=performance_traj(odrv, traj, samples))
+def trajectory_error(odrv, traj):
+    data = performance_traj(odrv, traj, samples)
+    t_df = pd.Series(data)
     error = sum(np.square(np.subtract(t_df.at["input_pos"],t_df.at["pos_estimate_a0"]))) + sum(np.square(np.subtract(t_df.at["input_pos"],t_df.at["pos_estimate_a1"])))
 
     #print("Quad error on exec = " +str(error))
-    return error
+    return (error, data)
 
 
 def vibration_error(odrv, vib_tol=histeresis_tol, t_time=test_time, rate=100):
@@ -210,6 +220,29 @@ def print_results(pop):
     for i in pop:
         print(i.generation,round(i.score,5),[round(g,3) for g in i.gains], sep="   ")
         print(round(i.traj_error,5),round(i.stat_error,5), sep=" + ")
+
+winners = []
+def print_winners():
+    length_data = [i for i in range(len(winners)*len(winners[0].data['input_pos']))]
+    estimatess = []
+    inputss = []
+    errorss = []
+    for w in winners:
+        e = w.data['pos_estimate_a0']
+        estimatess += e
+        i = w.data['input_pos']
+        inputss += i
+        dif = np.subtract(np.array(i),np.array(e))
+        errorss += list(dif)
+    list(length_data)
+    list(estimatess)
+    plt.plot(length_data, estimatess)
+    plt.plot(length_data, inputss)
+    plt.plot(length_data, errorss)
+    plt.xlabel("Muestreo")
+    plt.ylabel("Posición")
+    plt.legend(["Posición Actual", "Referencia", "Error"])
+    plt.show()
 
 '''
 def build_evo_raw():
