@@ -15,27 +15,28 @@ import calibrate
 import configure
 import trajectory
 ### EXECUTION TIME TOLERANCES
-exec_tolerance = .075
-reset_delays = 5
-tolerance_fails = 0
+exec_tolerance = 7.5/100
+reset_delays = 6
 samples_error_test = 50
+tolerance_fails = 0
 
 ### SAMPLING AND TRAJECTORY
-samples = 100
+samples_x_traj = 130
 traj = 0
 runs = 2
 
 ### VIBRATION TEST TOLERANCES ++ = MORE FLEXIBILITY
-test_time = .2
-num_tests = 5
-histeresis_tol = .02
-fail_penalty = 1.5
+static_test_time = .4
+static_num_points = 3
+static_histeresis_tol = .025
+static_fail_penalty = 1.5
 
 ### EVOLUTONARY PARAMETERS
 max_generations = 10
 inf_cycle = False
 
 population = []
+winners = []
 pop_size = 10
 elites = 2
 survivors = 5
@@ -55,17 +56,19 @@ def check_gains(proposed):
 def evo_gains(odrv):
     robo.start(odrv)
     global traj
-    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.75, t2=0.75, res=samples)
+    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.75, t2=0.75, res=samples_x_traj)
+
     class Individual:
         def __init__(self, generation, gains):
             self.generation = generation
             self.gains = gains
             configure.gains(odrv, *gains)
-            errs = get_errors_data(odrv, traj)
-            self.traj_error = errs[0]
-            self.stat_error = errs[1]
-            self.score = 1*self.traj_error+1*self.stat_error
-            self.data = errs[2]
+            traj_err, stat_err, data = get_exec_errors_data(odrv, runs, traj, samples_x_traj)
+            self.traj_error = traj_err
+            self.stat_error = stat_err
+            self.score = traj_err+stat_err
+            self.data = data
+
     global population
     population = []
     global winners
@@ -96,8 +99,8 @@ def evo_gains(odrv):
             p2 = r_choice(parents)
             population.append(Individual(generation, cross_parents(p1, p2)))
             n +=1
-        for _ in range(mutts):
-            mutt = r_choice(population)
+        for m in range(mutts):
+            mutt = population[m]
             population.append(Individual(generation, create_mutt(mutt)))
 
         population.sort(key=lambda p: p.score)
@@ -123,46 +126,31 @@ def create_mutt(origin):
 
     return check_gains(mutt_gains)
 
-def get_errors_data(odrv, traj):
-    trajs = []
-    vibs = []
+def get_exec_errors_data(odrv, runs, traj, samples_x_traj):
+    traj_errors = []
+    stat_errors = []
+    #vibs = []
     for _ in range(runs):
-        time.sleep(.05)
-        data_trajectory = trajectory_error(odrv, traj)
-        trajs.append(data_trajectory[0])
-        time.sleep(.025)
-        vibs.append(vibration_error(odrv))
-    return (np.mean(trajs), np.mean(vibs), data_trajectory[1])
+        data = test_trajectory(odrv, traj, static_test_time, samples_x_traj)
+        t_data = {}
+        s_data = {}
+        for d in data:
+            t_data[d] = data[d][:samples_x_traj]
+            s_data[d] = data[d][samples_x_traj:]
+        t_error = sum(np.square(np.subtract(t_data["input_pos"],t_data["pos_estimate_a0"]))) + sum(np.square(np.subtract(s_data["input_pos"],s_data["pos_estimate_a1"])))
+        s_error = sum(np.square(np.subtract(data["input_pos"][samples_x_traj:],data["pos_estimate_a0"][samples_x_traj:]))) + sum(np.square(np.subtract(data["input_pos"][samples_x_traj:],data["pos_estimate_a1"][samples_x_traj:])))
+        traj_errors.append(t_error)
+        stat_errors.append(s_error)
+        time.sleep(.5-static_test_time)
+        #vibs.append(vibration_error(odrv))
+    return (np.mean(traj_errors), np.mean(stat_errors), data)
 
-def trajectory_error(odrv, traj):
-    data = performance_traj(odrv, traj, samples)
-    t_df = pd.Series(data)
-    error = sum(np.square(np.subtract(t_df.at["input_pos"],t_df.at["pos_estimate_a0"]))) + sum(np.square(np.subtract(t_df.at["input_pos"],t_df.at["pos_estimate_a1"])))
 
-    #print("Quad error on exec = " +str(error))
-    return (error, data)
-
-
-def vibration_error(odrv, vib_tol=histeresis_tol, t_time=test_time, rate=100):
-
-    vibs = []
-    tests = num_tests
-    for i in range(0, round(rate*t_time)):
-        vibs.append(odrv.axis0.encoder.pos_estimate)
-        vibs.append(odrv.axis1.encoder.pos_estimate)
-        time.sleep(float(1/rate-robo.input_sleep_adjust))
-    vibs.sort()
-    histeresis = abs(np.mean(vibs[:tests]))+abs(np.mean(vibs[-tests:]))
-    if histeresis > vib_tol:
-        return histeresis*fail_penalty
-    else:
-        return histeresis
-
-def performance_traj(odrv, traj, samples=0):
-    if samples == 0:
+def test_trajectory(odrv, traj, static_test_time=.25, samples_x_traj=0):
+    if samples_x_traj == 0:
         sample_interval = 1
     else:
-        sample_interval = (len(traj["OUTBOUND"])+len(traj["RETURN"]))//samples
+        sample_interval = (len(traj["OUTBOUND"])+len(traj["RETURN"]))//samples_x_traj
 
     tot_time = traj["OUT_PERIOD"]*len(traj["OUTBOUND"]) + traj["RET_PERIOD"]*len(traj["RETURN"])
     sample_diff = len(traj["OUTBOUND"])%sample_interval
@@ -175,9 +163,8 @@ def performance_traj(odrv, traj, samples=0):
         currents_a0 = []
         currents_a1 = []
 
-        directions = (traj["OUTBOUND"], traj["RETURN"])
-
         start = time.perf_counter()
+        directions = (traj["OUTBOUND"], traj["RETURN"])
         for d_traj in directions:
             if d_traj== traj["OUTBOUND"]:
                 T_time = traj["OUT_PERIOD"]
@@ -199,7 +186,6 @@ def performance_traj(odrv, traj, samples=0):
         end = time.perf_counter()
         exec_time = end-start
         #print("TRAYECTORY TIME = " + str(exec_time))
-
         if abs(exec_time-tot_time) < tot_time*exec_tolerance:
             success = True
         else:
@@ -208,59 +194,38 @@ def performance_traj(odrv, traj, samples=0):
             if tolerance_fails >= reset_delays:
                 robo.update_time_errors(odrv, samples_error_test)
                 tolerance_fails = 0
-
     #End While not Succes loop
+    for _ in range(round(static_test_time/T_time)):
+        inputs.append(0)
+        estimates_a0.append(odrv.axis0.encoder.pos_estimate)
+        currents_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
+        estimates_a1.append(odrv.axis1.encoder.pos_estimate)
+        currents_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
+        time.sleep(float(T_time-robo.data_delay))
+
     return {"input_pos":inputs,
     "pos_estimate_a0":estimates_a0,
     "pos_estimate_a1":estimates_a1,
     "Iq_setpoint_a0":currents_a0,
     "Iq_setpoint_a1":currents_a1}
 
+""""
+def vibration_error(odrv, vib_tol=vib_histeresis_tol, vib_test_time=test_time, rate=100):
+
+    vibs = []
+    tests = vib_num_points
+    for i in range(0, round(rate*vib_test_time)):
+        vibs.append(odrv.axis0.encoder.pos_estimate)
+        vibs.append(odrv.axis1.encoder.pos_estimate)
+        time.sleep(float(1/rate-robo.input_sleep_adjust))
+    vibs.sort()
+    histeresis = abs(np.mean(vibs[:tests]))+abs(np.mean(vibs[-tests:]))
+    if histeresis > vib_tol:
+        return histeresis*vib_fail_penalty
+    else:
+        return histeresis
+"""
 def print_results(pop):
     for i in pop:
         print(i.generation,round(i.score,5),[round(g,3) for g in i.gains], sep="   ")
         print(round(i.traj_error,5),round(i.stat_error,5), sep=" + ")
-
-winners = []
-def print_winners():
-    length_data = [i for i in range(len(winners)*len(winners[0].data['input_pos']))]
-    estimatess = []
-    inputss = []
-    errorss = []
-    for w in winners:
-        e = w.data['pos_estimate_a0']
-        estimatess += e
-        i = w.data['input_pos']
-        inputss += i
-        dif = np.subtract(np.array(i),np.array(e))
-        errorss += list(dif)
-    list(length_data)
-    list(estimatess)
-    plt.plot(length_data, estimatess)
-    plt.plot(length_data, inputss)
-    plt.plot(length_data, errorss)
-    plt.xlabel("Muestreo")
-    plt.ylabel("Posición")
-    plt.legend(["Posición Actual", "Referencia", "Error"])
-    plt.show()
-
-'''
-def build_evo_raw():
-    df = pd.DataFrame()
-    # Create columns to store data
-    df.insert(0, "Individuo", pd.Series([], dtype=int))
-    df.insert(1, "pos_gain", pd.Series([], dtype=float))
-    df.insert(2, "vel_gain", pd.Series([], dtype=float))
-    df.insert(3, "vel_integrator_gain", pd.Series([], dtype=float))
-    df.insert(4, "input_pos", pd.Series([], dtype=object))
-    df.insert(5, "pos_estimate_a0", pd.Series([], dtype=object))
-    df.insert(6, "pos_estimate_a1", pd.Series([], dtype=object))
-    df.insert(7, "Iq_setpoint_a0", pd.Series([], dtype=object))
-    df.insert(8, "Iq_setpoint_a1", pd.Series([], dtype=object))
-    return df
-
-def add_evo_raw(df, id, kp, kv, kvi, inputs, e0, e1, c1, c2):
-    row = [id, kp, kv, kvi, inputs, e0, e1, c1, c2
-    df.loc[len(df)] = row
-    return df
-'''
