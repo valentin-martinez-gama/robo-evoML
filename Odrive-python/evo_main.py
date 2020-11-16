@@ -5,7 +5,6 @@ from random import triangular as r_tri
 from random import choice as r_choice
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 import odrive
 from odrive.enums import *
@@ -14,6 +13,7 @@ import robo
 import calibrate
 import configure
 import trajectory
+import plots
 ### EXECUTION TIME TOLERANCES
 exec_tolerance = 7.5/100
 reset_delays = 6
@@ -21,12 +21,12 @@ samples_error_test = 50
 tolerance_fails = 0
 
 ### SAMPLING AND TRAJECTORY
-samples_x_traj = 130
+samples_x_traj = 150
 traj = 0
 runs = 2
 
 ### VIBRATION TEST TOLERANCES ++ = MORE FLEXIBILITY
-static_test_time = .4
+static_test_time = .25
 static_num_points = 3
 static_histeresis_tol = .025
 static_fail_penalty = 1.5
@@ -37,15 +37,16 @@ inf_cycle = False
 
 population = []
 winners = []
+plot_group = []
 pop_size = 10
 elites = 2
-survivors = 5
-mutts = 2
-mutt_rate = .1
+survivors = 4
+mutts = 6
+mutt_rate = .15
 
 ### SAFETY LIMITS
-k_range = ((10, 150), (.05, .25), (0, 1.2))
-kp_frontier = [lambda kp: kp, lambda kp: -.001*kp+k_range[1][1]-.02, lambda kp: max(80,kp)/140]
+k_range = ((20, 80), (.05, .25), (0, .5))
+kp_frontier = [lambda kp: kp, lambda kp: max(-.0011*kp+k_range[1][1]-.05,k_range[1][0]+.00020*kp), lambda kp: 1.2]
 def check_gains(proposed):
     approved = [20, .25, .4]
     for i,prop_g in enumerate(proposed):
@@ -56,7 +57,7 @@ def check_gains(proposed):
 def evo_gains(odrv):
     robo.start(odrv)
     global traj
-    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.75, t2=0.75, res=samples_x_traj)
+    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.85, t2=0.85, res=samples_x_traj)
 
     class Individual:
         def __init__(self, generation, gains):
@@ -71,22 +72,24 @@ def evo_gains(odrv):
 
     global population
     population = []
-    global winners
-    winners = []
+    global plot_group
+    plot_group = []
     #Initiate population randomly
     print("*** Creating 0 generation ***")
     generation = 0
     for n in range(0, pop_size):
-        kp = r_uni(20,140)
-        #ASEGURAR QUE NO SE PASE LA FRONTERA DE PARETO DE VIBRACIONES VIOLENTAS
-        kv = r_uni(.06,.2)+r_tri(0,.8,0.01)
-        kvi = r_tri(0,1.4,.3)
+        kp = r_uni(k_range[0][0], k_range[0][1])
+        kv = r_uni(k_range[1][0], k_range[1][1])+r_tri(0,.8,0.01)
+        kvi = r_uni(k_range[2][0], k_range[2][1])
         population.append(Individual(0, check_gains([kp, kv, kvi])))
+    init_plot = population[0]
+    plot_group.append(init_plot)
     population.sort(key=lambda p: p.score)
-    print_results(population)
     win = population[0]
     winners.append(win)
+    print_results(population)
 
+    improvs = 0
     while (generation < max_generations) or inf_cycle:
         generation += 1
         print('\n'+"*** Creating "+str(generation)+ " generation ***")
@@ -105,13 +108,18 @@ def evo_gains(odrv):
 
         population.sort(key=lambda p: p.score)
         print_results(population)
+
         if (population[0] != win):
             win = population[0]
             winners.append(win)
+            improvs +=1
+            if improvs == 2:
+                plot_group.append(win)
 
     population.sort(key=lambda p: p.score)
-    print_winners()
-    return population
+    plot_group.append(population[0])
+    plots.print_group_trajs(plot_group)
+    return (population, plot_group)
 
 def cross_parents(p1, p2):
 
@@ -127,6 +135,7 @@ def create_mutt(origin):
     return check_gains(mutt_gains)
 
 def get_exec_errors_data(odrv, runs, traj, samples_x_traj):
+    time.sleep(.3-static_test_time)
     traj_errors = []
     stat_errors = []
     #vibs = []
@@ -141,7 +150,6 @@ def get_exec_errors_data(odrv, runs, traj, samples_x_traj):
         s_error = sum(np.square(np.subtract(data["input_pos"][samples_x_traj:],data["pos_estimate_a0"][samples_x_traj:]))) + sum(np.square(np.subtract(data["input_pos"][samples_x_traj:],data["pos_estimate_a1"][samples_x_traj:])))
         traj_errors.append(t_error)
         stat_errors.append(s_error)
-        time.sleep(.5-static_test_time)
         #vibs.append(vibration_error(odrv))
     return (np.mean(traj_errors), np.mean(stat_errors), data)
 
@@ -157,6 +165,7 @@ def test_trajectory(odrv, traj, static_test_time=.25, samples_x_traj=0):
 
     success = False
     while not success:
+        times = []
         inputs = []
         estimates_a0 = []
         estimates_a1 = []
@@ -175,6 +184,7 @@ def test_trajectory(odrv, traj, static_test_time=.25, samples_x_traj=0):
                 odrv.axis0.controller.input_pos = p
                 odrv.axis1.controller.input_pos = p
                 if ((i-1)%sample_interval == sample_interval-1):
+                    times.append(time.perf_counter()-start)
                     inputs.append(p)
                     estimates_a0.append(odrv.axis0.encoder.pos_estimate)
                     currents_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
@@ -196,6 +206,7 @@ def test_trajectory(odrv, traj, static_test_time=.25, samples_x_traj=0):
                 tolerance_fails = 0
     #End While not Succes loop
     for _ in range(round(static_test_time/T_time)):
+        times.append(time.perf_counter()-start)
         inputs.append(0)
         estimates_a0.append(odrv.axis0.encoder.pos_estimate)
         currents_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
@@ -203,7 +214,9 @@ def test_trajectory(odrv, traj, static_test_time=.25, samples_x_traj=0):
         currents_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
         time.sleep(float(T_time-robo.data_delay))
 
-    return {"input_pos":inputs,
+    return {
+    "time_axis":times,
+    "input_pos":inputs,
     "pos_estimate_a0":estimates_a0,
     "pos_estimate_a1":estimates_a1,
     "Iq_setpoint_a0":currents_a0,

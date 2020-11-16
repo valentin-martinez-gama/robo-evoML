@@ -1,3 +1,6 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 ### Para copiar archivo adentro de la libreria de Odrive ###
 if __name__ == '__main__':
     import shutil
@@ -5,7 +8,7 @@ if __name__ == '__main__':
 
 import odrive.utils as utils
 
-def print_inidividauls_trajs(chosen):
+def print_group_trajs(chosen):
     time_axis = []
     accumulated_time = 0
     estimatess = []
@@ -14,8 +17,10 @@ def print_inidividauls_trajs(chosen):
     for indiv in chosen:
         time_axis.extend([t+accumulated_time for t in indiv.data['time_axis']])
         accumulated_time = time_axis[-1]
-        estimatess.extend(indiv.data['pos_estimate_a1'])
-        inputss.extend(indiv.data['input_pos'])
+        e = indiv.data['pos_estimate_a1']
+        estimatess.extend(e)
+        i = indiv.data['input_pos']
+        inputss.extend(i)
         errorss.extend(list(np.subtract(np.array(i),np.array(e))))
     plt.plot(time_axis, estimatess)
     plt.plot(time_axis, inputss)
