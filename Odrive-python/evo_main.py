@@ -15,15 +15,15 @@ import configure
 import trajectory
 import plots
 ### EXECUTION TIME TOLERANCES
-exec_tolerance = 7.5/100
+exec_tolerance = 12/100
 reset_delays = 6
 samples_error_test = 50
 tolerance_fails = 0
 
 ### SAMPLING AND TRAJECTORY
-samples_x_traj = 150
+samples_x_traj = 200
 traj = 0
-runs = 2
+runs = 1
 
 ### VIBRATION TEST TOLERANCES ++ = MORE FLEXIBILITY
 static_test_time = .25
@@ -53,11 +53,68 @@ def check_gains(proposed):
         approved[i] = min( min( max(prop_g, k_range[i][0]), k_range[i][1]), kp_frontier[i](proposed[0]))
     return approved
 
+def grafica_robusto(odrv, gains, masses):
+    robo.start(odrv)
+    global traj
+    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=1.1, t2=1.1, res=samples_x_traj)
+
+    class Individual:
+        def __init__(self, generation, gains):
+            self.generation = generation
+            self.gains = gains
+            configure.gains(odrv, *gains)
+            traj_err, stat_err, data = get_exec_errors_data(odrv, runs, traj, samples_x_traj)
+            self.traj_error = traj_err
+            self.stat_error = stat_err
+            self.score = traj_err+stat_err
+            self.data = data
+    robs = []
+    for m in masses:
+        print(m)
+        input("Inserta la siguiente masa")
+        test = Individual(m, gains)
+        robs.append(test)
+    plots.print_group_trajs(robs)
+    return robs
+
+def check_robusto(odrv, candidates, masses):
+    #res = evo.check_robusto(odrv0,[[77.718,.1147,.3180],[79.127,.1047,.2398],[80,.1037,.4389],[80,.1082,.6812]], (325,250,125,0))
+    robo.start(odrv)
+    global traj
+    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.85, t2=0.85, res=samples_x_traj)
+
+    class Individual:
+        def __init__(self, generation, gains):
+            self.generation = generation
+            self.gains = gains
+            configure.gains(odrv, *gains)
+            traj_err, stat_err, data = get_exec_errors_data(odrv, runs, traj, samples_x_traj)
+            self.traj_error = traj_err
+            self.stat_error = stat_err
+            self.score = traj_err+stat_err
+            self.data = data
+
+    score_sumas = {}
+    for i,c in enumerate(candidates):
+        score_sumas[i] = 0
+    for m in masses:
+        cands = []
+        print(m)
+        input("Inserta la siguiente masa")
+        for i,c in enumerate(candidates):
+            test = Individual(m, check_gains(c))
+            cands.append(test)
+            score_sumas[i] += test.score
+        print(score_sumas)
+        plots.print_group_trajs(cands)
+    return score_sumas
+
+
 
 def evo_gains(odrv):
     robo.start(odrv)
     global traj
-    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.85, t2=0.85, res=samples_x_traj)
+    traj = trajectory.build_trajectory(pos1=0, pos2=pi, t1=0.95, t2=0.95, res=samples_x_traj)
 
     class Individual:
         def __init__(self, generation, gains):
