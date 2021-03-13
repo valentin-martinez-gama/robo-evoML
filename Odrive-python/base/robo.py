@@ -4,12 +4,12 @@ import odrive
 from odrive.enums import *
 from odrive.utils import dump_errors
 
-import calibrate
-import configure
-import move
-import plots
-import trajectory
-import timetest
+from . import calibrate
+from . import configure
+from . import move
+from . import plots
+from . import trajectory
+from . import timetest
 sleep_error = .0007
 input_delay = .00124
 data_delay = .0021

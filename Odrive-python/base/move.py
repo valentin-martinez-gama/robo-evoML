@@ -4,9 +4,9 @@ import time
 import odrive
 from odrive.enums import *
 
-import configure
-import trajectory
-import robo
+from . import configure
+from . import trajectory
+from . import robo
 sleep_error = .00086
 input_delay = .00124
 data_delay = .0021

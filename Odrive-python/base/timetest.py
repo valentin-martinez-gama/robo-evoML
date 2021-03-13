@@ -1,7 +1,7 @@
 import time
 from math import floor, log, ceil
 
-import trajectory
+from . import trajectory
 
 def check_sleep(amount):
     start = time.perf_counter()

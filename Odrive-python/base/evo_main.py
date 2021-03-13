@@ -9,11 +9,11 @@ import numpy as np
 import odrive
 from odrive.enums import *
 
-import robo
-import calibrate
-import configure
-import trajectory
-import plots
+from . import robo
+from . import calibrate
+from . import configure
+from . import trajectory
+from . import plots
 ### EXECUTION TIME TOLERANCES
 exec_tolerance = 12/100
 reset_delays = 6
@@ -200,11 +200,13 @@ def get_exec_errors_data(odrv, runs, traj, samples_x_traj):
         data = test_trajectory(odrv, traj, static_test_time, samples_x_traj)
         t_data = {}
         s_data = {}
-        for d in data:
-            t_data[d] = data[d][:samples_x_traj]
-            s_data[d] = data[d][samples_x_traj:]
-        t_error = sum(np.square(np.subtract(t_data["input_pos"],t_data["pos_estimate_a0"]))) + sum(np.square(np.subtract(s_data["input_pos"],s_data["pos_estimate_a1"])))
-        s_error = sum(np.square(np.subtract(data["input_pos"][samples_x_traj:],data["pos_estimate_a0"][samples_x_traj:]))) + sum(np.square(np.subtract(data["input_pos"][samples_x_traj:],data["pos_estimate_a1"][samples_x_traj:])))
+        for field in data:
+            t_data[field] = data[field][:samples_x_traj]
+            s_data[field] = data[field][samples_x_traj:]
+        t_error =
+        sum(np.square(np.subtract(t_data["input_pos"],t_data["pos_estimate_a0"]))) + sum(np.square(np.subtract(t_data["input_pos"],t_data["pos_estimate_a1"])))
+        s_error =
+        sum(np.square(np.subtract(s_data["input_pos"],s_data["pos_estimate_a0"]))) + sum(np.square(np.subtract(s_data["input_pos"],s_data["pos_estimate_a1"])))
         traj_errors.append(t_error)
         stat_errors.append(s_error)
         #vibs.append(vibration_error(odrv))

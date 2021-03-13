@@ -5,7 +5,7 @@ import odrive
 from odrive.enums import *
 from odrive.utils import dump_errors
 
-from configure import set_startup_procedure
+from .configure import set_startup_procedure
 
 
 def check_error(odrv_axis, message):
