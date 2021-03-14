@@ -5,13 +5,12 @@ from random import triangular as r_tri
 from random import choice as r_choice
 import pandas as pd
 import numpy as np
+import json
 
 import odrive
 from odrive.enums import *
 
-import robo
-import configure
-import plots
+from base import configure, plots
 import ML
 ### EXECUTION TIME TOLERANCES
 exec_tolerance = 12/100
@@ -41,32 +40,43 @@ survivors = 4
 mutts = 6
 mutt_rate = .15
 
+k_range = (20,80)
 ### SAFETY LIMITS
-k_range = ((20, 80), (.05, .25), (0, .5))
-kp_frontier = [lambda kp: kp, lambda kp: max(-.0011*kp+k_range[1][1]-.05,k_range[1][0]+.00020*kp), lambda kp: 1.2]
+k_limits = ((k_range[0], k_range[1]), (lambda kp: .052+.00020*kp, lambda kp:.48-.005*kp), (0, lambda kv: kv*11))
+
 def check_gains(proposed):
-    approved = [20, .25, .4]
-    for i,prop_g in enumerate(proposed):
-        approved[i] = min( min( max(prop_g, k_range[i][0]), k_range[i][1]), kp_frontier[i](proposed[0]))
-    return approved
+    prop_kp, prop_kv, prop_kv_int = proposed
+    kp = min( max(prop_kp, k_limits[0][0]), k_limits[0][1])
+    kv = min( max(prop_kv, k_limits[1][0](kp)), k_limits[1][1](kp))
+    kv_int = min( max(prop_kv_int, k_limits[2][0]), k_limits[2][1](kv))
+    return kp,kv,kv_int
 
 def save_ML_data(gen_list, winner, traj_array, filename):
-    with open(filename, 'r+') as master_file:
-        oldData = json.load(json_file)
-        now = time.localtime()
-        newData = {
-            "runID" : int(str(now.tm_year)+str(now.tm_mon)+str(now.tm_mday)
-                         +str(now.tm_hour)+str(now.tm_min))
-            "winner": winner,
-            "traj": traj_array,
-            "runs_data": gen_list
-        }
-        data = oldData.append(newData)
-        json.dump(data, master_file, indent=4)
-        
-def evo_gains_ML(odrv, traj_array, save_file="master.json"):
+    now = time.localtime()
+    newData = {
+        "runID" : int(str(now.tm_year)+str(now.tm_mon)+str(now.tm_mday)+str(now.tm_hour)+str(now.tm_min)),
+        "winner": winner,
+        "traj": traj_array,
+        "runs_data": gen_list
+    }
+    try:
+        with open(filename, 'r+') as master_file:
+            data = json.load(master_file)
+            data.append(newData)
+            master_file.seek(0)
+            json.dump(data, master_file, indent=4)
+    except FileNotFoundError:
+        with open(filename, 'w') as master_file:
+            json.dump([newData], master_file, indent=4)
 
-    ML.start(odrv)
+    with open('lean_'+filename, 'a') as lean_file:
+        lean_file.write('\n')
+        json.dump(newData, lean_file)
+
+
+def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="v0.0.1.json"):
+
+    #ML.start(odrv)
     global traj
     traj = traj_array
 
@@ -83,11 +93,11 @@ def evo_gains_ML(odrv, traj_array, save_file="master.json"):
             te0,te1,se0,se1,t_dat,s_dat = get_exec_errors_data(odrv, traj)
             self.errors = {
                 "traj_error_a0" : te0,
-                "traj_error_a1" : te2,
+                "traj_error_a1" : te1,
                 "stat_error_a0" : se0,
                 "stat_error_a1" : se1
                 }
-            self.score = te0+te2+se0+se1
+            self.score = te0+te1+se0+se1
             self.traj_data = t_dat
             self.stat_data = s_dat
 
@@ -100,13 +110,14 @@ def evo_gains_ML(odrv, traj_array, save_file="master.json"):
     print("*** Creating 0 generation ***")
     generation = 0
     for n in range(0, pop_size):
-        kp = r_uni(k_range[0][0], k_range[0][1])
-        kv = r_uni(k_range[1][0], k_range[1][1])+r_tri(0,.8,0.01)
-        kvi = r_uni(k_range[2][0], k_range[2][1])
+        kp = r_uni(k_range[0], k_range[1])
+        kv = r_uni(k_limits[1][0](kp), k_limits[1][1](kp))
+        kvi = r_uni(k_limits[2][0], k_limits[2][1](kv))
         population.append(Individual(0, check_gains([kp, kv, kvi])))
 
     plot_group.append(population[0])
     population.sort(key=lambda p: p.score)
+    win = population[0]
     print_results(population)
     historic = [[p.__dict__ for p in population]]
 
@@ -139,25 +150,25 @@ def evo_gains_ML(odrv, traj_array, save_file="master.json"):
 
     population.sort(key=lambda p: p.score)
     plot_group.append(population[0])
-    plots.print_group_trajs(plot_group)
 
-    save_ML_data(historic, population[0].__dict__, traj_array, 'master.json')
-    return (population, plot_group)
+    ML.ML_print_group_trajs(plot_group)
+    save_ML_data(historic, population[0].__dict__, traj_array, save_file)
+    return historic, population[0].__dict__, traj_array, save_file
+
 
 def get_exec_errors_data(odrv, traj):
     time.sleep(.3-static_test_time)
 
     data = test_trajectory(odrv, traj, static_test_time)
-    data["estado"] = ["Trayectoria"]*len(traj) + ["Estatico"]*len(data)-len(traj)
     t_data = {}
     s_data = {}
     for field in data:
         t_data[field] = data[field][:len(traj)]
         s_data[field] = data[field][len(traj):]
-    traj_error_a0 = sum(np.square(np.subtract(t_data["input_pos"],t_data["pos_estimate_a0"])))
-    traj_error_a1 = sum(np.square(np.subtract(t_data["input_pos"],t_data["pos_estimate_a1"])))
-    stat_error_a0 = sum(np.square(np.subtract(s_data["input_pos"],s_data["pos_estimate_a0"])))
-    stat_error_a1 = sum(np.square(np.subtract(s_data["input_pos"],s_data["pos_estimate_a1"])))
+    traj_error_a0 = sum(np.square(np.subtract(t_data["pos_set_a0"],t_data["pos_estimate_a0"])))
+    traj_error_a1 = sum(np.square(np.subtract(t_data["pos_set_a1"],t_data["pos_estimate_a1"])))
+    stat_error_a0 = sum(np.square(np.subtract(s_data["pos_set_a0"],s_data["pos_estimate_a0"])))
+    stat_error_a1 = sum(np.square(np.subtract(s_data["pos_set_a1"],s_data["pos_estimate_a1"])))
 
     return (traj_error_a0, traj_error_a1, stat_error_a0, stat_error_a1, t_data, s_data)
 
@@ -169,8 +180,8 @@ def test_trajectory(odrv, traj, static_test_time=.25):
     while not success:
         pos_set_a0 = []
         pos_set_a1 = []
-        pos_estimates_a0 = []
-        pos_estimates_a1 = []
+        pos_estimate_a0 = []
+        pos_estimate_a1 = []
         Iq_set_a0 = []
         Iq_set_a1 = []
         Iq_measured_a0 = []
@@ -184,10 +195,10 @@ def test_trajectory(odrv, traj, static_test_time=.25):
 
         start = time.perf_counter()
         for p in traj:
-            pos_set_a0.append(pset_0)
-            pos_set_a1.append(pset_1)
-            pos_estimates_a0.append(odrv.axis0.encoder.pos_estimate)
-            pos_estimates_a1.append(odrv.axis1.encoder.pos_estimate)
+            pos_set_a0.append(p[0])
+            pos_set_a1.append(p[1])
+            pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
+            pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
             Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
             Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
             Iq_measured_a0.append(odrv.axis0.motor.current_control.Iq_measured)
@@ -212,8 +223,8 @@ def test_trajectory(odrv, traj, static_test_time=.25):
     for _ in range(round(static_test_time/T_input)):
         pos_set_a0.append(pset_0)
         pos_set_a1.append(pset_1)
-        pos_estimates_a0.append(odrv.axis0.encoder.pos_estimate)
-        pos_estimates_a1.append(odrv.axis1.encoder.pos_estimate)
+        pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
+        pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
         Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
         Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
         Iq_measured_a0.append(odrv.axis0.motor.current_control.Iq_measured)
@@ -223,8 +234,8 @@ def test_trajectory(odrv, traj, static_test_time=.25):
     return {
     "pos_set_a0":pos_set_a0,
     "pos_set_a1":pos_set_a1,
-    "pos_estimates_a0":pos_estimate_a0,
-    "pos_estimates_a1":pos_estimate_a1,
+    "pos_estimate_a0":pos_estimate_a0,
+    "pos_estimate_a1":pos_estimate_a1,
     "Iq_set_a0":Iq_set_a0,
     "Iq_set_a1":Iq_set_a1,
     "Iq_measured_a0":Iq_measured_a0,
@@ -234,14 +245,14 @@ def test_trajectory(odrv, traj, static_test_time=.25):
 
 def cross_parents(p1, p2):
     cross_rate = r_uni(0,(1+mutt_rate))
-    ch_gains = np.add([g1*cross_rate for g1 in p1.gains],[g2*(1-cross_rate) for g2 in p2.gains])
+    ch_gains = np.add([p1.gains[g1]*cross_rate for g1 in p1.gains],[p2.gains[g2]*(1-cross_rate) for g2 in p2.gains])
     return check_gains(ch_gains)
 
 def create_mutt(origin):
-    mutt_gains = [g*(1+r_uni(-mutt_rate,mutt_rate)) for g in origin.gains]
+    mutt_gains = [origin.gains[g]*(1+r_uni(-mutt_rate,mutt_rate)) for g in origin.gains]
     return check_gains(mutt_gains)
 
 def print_results(pop):
     for i in pop:
-        print(i.generation,round(i.score,5),[round(g,3) for g in i.gains], sep="   ")
-        print(round(i.traj_error,5),round(i.stat_error,5), sep=" + ")
+        print(i.generation,round(i.score,5),[round(i.gains[g],3) for g in i.gains], sep="   ")
+        print(round(i.errors["traj_error_a0"]+i.errors["traj_error_a1"],5),round(i.errors["stat_error_a0"]+i.errors["stat_error_a1"],5), sep=" + ")

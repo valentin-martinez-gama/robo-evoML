@@ -203,10 +203,8 @@ def get_exec_errors_data(odrv, runs, traj, samples_x_traj):
         for field in data:
             t_data[field] = data[field][:samples_x_traj]
             s_data[field] = data[field][samples_x_traj:]
-        t_error =
-        sum(np.square(np.subtract(t_data["input_pos"],t_data["pos_estimate_a0"]))) + sum(np.square(np.subtract(t_data["input_pos"],t_data["pos_estimate_a1"])))
-        s_error =
-        sum(np.square(np.subtract(s_data["input_pos"],s_data["pos_estimate_a0"]))) + sum(np.square(np.subtract(s_data["input_pos"],s_data["pos_estimate_a1"])))
+        t_error = sum(np.square(np.subtract(t_data["input_pos"],t_data["pos_estimate_a0"]))) + sum(np.square(np.subtract(t_data["input_pos"],t_data["pos_estimate_a1"])))
+        s_error = sum(np.square(np.subtract(s_data["input_pos"],s_data["pos_estimate_a0"]))) + sum(np.square(np.subtract(s_data["input_pos"],s_data["pos_estimate_a1"])))
         traj_errors.append(t_error)
         stat_errors.append(s_error)
         #vibs.append(vibration_error(odrv))

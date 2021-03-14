@@ -23,6 +23,8 @@ Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 
 import time
 from math import pi
+import numpy as np
+import matplotlib.pyplot as plt
 
 import odrive
 from odrive.enums import *
@@ -91,8 +93,8 @@ def ML_get_info_read_delay(odrv, iters=100):
         time.sleep(.01)
 
         start = time.perf_counter()
-        pos_set_a0.append(pset_0)
-        pos_set_a1.append(pset_1)
+        pos_set_a0.append(p)
+        pos_set_a1.append(p)
         pos_estimates_a0.append(odrv.axis0.encoder.pos_estimate)
         pos_estimates_a1.append(odrv.axis1.encoder.pos_estimate)
         current_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
@@ -110,7 +112,29 @@ def ML_get_info_read_delay(odrv, iters=100):
     return read_delay
 
 
-def ML_trajectory(pos1=0, pos2=pi, t=1):
+def ML_trajectory(pos1=0, pos2=pi, t=.5):
     traj_data = trajectory.build_trajectory(pos1, pos2, t1=t, t2=t, res = 2*t/.02)
     ML_traj = [[traj_data["OUTBOUND"][i], traj_data["OUTBOUND"][i]] for i in range(len(traj_data["OUTBOUND"]))] + [[traj_data["RETURN"][i], traj_data["RETURN"][i]] for i in range(len(traj_data["RETURN"]))]
     return ML_traj
+
+def ML_print_group_trajs(chosen):
+    time_axis = []
+    accumulated_time = 0
+    estimatess = []
+    inputss = []
+    errorss = []
+    for indiv in chosen:
+        time_axis.extend([t+accumulated_time for t in range(0,len(indiv.traj_data['pos_estimate_a1']+indiv.stat_data['pos_estimate_a1']))])
+        accumulated_time = time_axis[-1]
+        e = indiv.traj_data['pos_estimate_a1']+indiv.stat_data['pos_estimate_a1']
+        estimatess.extend(e)
+        i = indiv.traj_data['pos_set_a1']+indiv.stat_data['pos_set_a1']
+        inputss.extend(i)
+        errorss.extend(list(np.multiply(25,np.square(np.subtract(np.array(i),np.array(e))))))
+    plt.plot(time_axis, estimatess)
+    plt.plot(time_axis, inputss)
+    plt.plot(time_axis, errorss)
+    plt.xlabel("Muestreo")
+    plt.ylabel("Posición")
+    plt.legend(["Posición Actual", "Referencia", "Error"])
+    plt.show()
