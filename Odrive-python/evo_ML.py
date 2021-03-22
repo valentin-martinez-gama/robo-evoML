@@ -40,7 +40,7 @@ survivors = 4
 mutts = 6
 mutt_rate = .15
 
-k_range = (20,80)
+k_range = (20,70)
 ### SAFETY LIMITS
 k_limits = ((k_range[0], k_range[1]), (lambda kp: .052+.00020*kp, lambda kp:.48-.005*kp), (0, lambda kv: kv*11))
 
@@ -60,18 +60,18 @@ def save_ML_data(gen_list, winner, traj_array, filename):
         "runs_data": gen_list
     }
     try:
-        with open(filename, 'r+') as master_file:
+        with open('pretty_'+filename, 'r+') as master_file:
             data = json.load(master_file)
             data.append(newData)
             master_file.seek(0)
-            json.dump(data, master_file, indent=4)
+            json.dump(data, master_file, indent=2)
     except FileNotFoundError:
-        with open(filename, 'w') as master_file:
-            json.dump([newData], master_file, indent=4)
+        with open('pretty_'+filename, 'w') as master_file:
+            json.dump([newData], master_file, indent=2)
 
-    with open('lean_'+filename, 'a') as lean_file:
-        lean_file.write('\n')
+    with open(filename, 'a') as lean_file:
         json.dump(newData, lean_file)
+        lean_file.write('\n')
 
 
 def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="v0.0.1.json"):
@@ -79,7 +79,6 @@ def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="v0.0.1.json"):
     #ML.start(odrv)
     global traj
     traj = traj_array
-
 
     class Individual:
         def __init__(self, generation, gains):
@@ -165,10 +164,10 @@ def get_exec_errors_data(odrv, traj):
     for field in data:
         t_data[field] = data[field][:len(traj)]
         s_data[field] = data[field][len(traj):]
-    traj_error_a0 = sum(np.square(np.subtract(t_data["pos_set_a0"],t_data["pos_estimate_a0"])))
-    traj_error_a1 = sum(np.square(np.subtract(t_data["pos_set_a1"],t_data["pos_estimate_a1"])))
-    stat_error_a0 = sum(np.square(np.subtract(s_data["pos_set_a0"],s_data["pos_estimate_a0"])))
-    stat_error_a1 = sum(np.square(np.subtract(s_data["pos_set_a1"],s_data["pos_estimate_a1"])))
+    traj_error_a0 = sum(np.abs(np.subtract(t_data["pos_set_a0"],t_data["pos_estimate_a0"])))
+    traj_error_a1 = sum(np.abs(np.subtract(t_data["pos_set_a1"],t_data["pos_estimate_a1"])))
+    stat_error_a0 = sum(np.abs(np.subtract(s_data["pos_set_a0"],s_data["pos_estimate_a0"])))
+    stat_error_a1 = sum(np.abs(np.subtract(s_data["pos_set_a1"],s_data["pos_estimate_a1"])))
 
     return (traj_error_a0, traj_error_a1, stat_error_a0, stat_error_a1, t_data, s_data)
 
