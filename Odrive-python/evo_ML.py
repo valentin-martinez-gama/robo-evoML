@@ -13,7 +13,7 @@ from odrive.enums import *
 from base import configure, plots
 import ML
 ### EXECUTION TIME TOLERANCES
-exec_tolerance = 12/100
+exec_tolerance = 10/100
 reset_delays = 6
 samples_error_test = 50
 tolerance_fails = 0
@@ -24,9 +24,6 @@ traj = []
 
 ### VIBRATION TEST TOLERANCES ++ = MORE FLEXIBILITY
 static_test_time = .25
-static_num_points = 3
-static_histeresis_tol = .025
-static_fail_penalty = 1.5
 
 ### EVOLUTONARY PARAMETERS
 max_generations = 10
@@ -59,6 +56,7 @@ def save_ML_data(gen_list, winner, traj_array, filename):
         "traj": traj_array,
         "runs_data": gen_list
     }
+    '''
     try:
         with open('pretty_'+filename, 'r+') as master_file:
             data = json.load(master_file)
@@ -72,9 +70,9 @@ def save_ML_data(gen_list, winner, traj_array, filename):
     with open(filename, 'a') as lean_file:
         json.dump(newData, lean_file)
         lean_file.write('\n')
+    '''
 
-
-def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="v0.0.1.json"):
+def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="v1.0.0.json"):
 
     #ML.start(odrv)
     global traj
