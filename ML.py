@@ -30,12 +30,13 @@ import odrive
 from odrive.enums import *
 from odrive.utils import dump_errors
 
-from base import calibrate
-from base import configure
-from base import move
-from base import plots
-from base import trajectory
-from base import timetest
+from Odrive_control import robo
+from Odrive_control import calibrate
+from Odrive_control import configure
+from Odrive_control import move
+from Odrive_control import plots
+from Odrive_control import trajectory
+from Odrive_control import timetest
 sleep_error = .0007
 input_delay = .00124
 data_delay = .0021
@@ -46,7 +47,7 @@ def start(odrv):
 
     dump_errors(odrv,True)
     if (odrv.axis0.encoder.config.pre_calibrated and odrv.axis1.encoder.config.pre_calibrated) != 1:
-        print("System not calibrated - proceeding to calibration based on index search")
+        print("System not calibrated - proceeding to calibration Odrive_controld on index search")
         calibrate.first_time_calibration(odrv)
 
     configure.currents(odrv)
@@ -56,11 +57,11 @@ def start(odrv):
 
     calibrate.set_encoder_zero(odrv)
     time.sleep(.2)
-    update_time_errors(odrv)
+    ML_update_time_errors(odrv)
 
     return "DONE start robo"
 
-def update_time_errors(odrv, samples=100):
+def ML_update_time_errors(odrv, samples=100):
     time.sleep(.1)
     print("Adjusting update time errors")
     global sleep_error, input_delay, data_delay, input_sleep_adjust

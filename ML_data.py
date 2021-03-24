@@ -1,6 +1,18 @@
 import pandas as pd
 import json
 
+def build_traj_from_csv(in_file, traj_tag, out_file='robo_trajs.json'):
+    with open(in_file, 'r') as csv_traj:
+        pos_set_a0 = csv_traj.readline()
+        pos_set_a1 = csv_traj.readline()
+
+        traj = zip(pos_set_a0, pos_set_a1)
+
+    with open(out_file, 'a') as list_traj:
+        json.dump({'Tag':traj_tag, 'Trajectory':traj})
+        list_traj.write('\n')
+
+
 def build_ML_training_set(in_file, out_file='out_file.csv', group_size=5):
 
     error_cols = ['pos_error_'+ax+'_n'+str(g) for ax in ['a0','a1'] for g in range(group_size)]+['Iq_error_'+ax+'_n'+str(g) for ax in ['a0','a1'] for g in range(group_size)]

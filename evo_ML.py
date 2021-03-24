@@ -10,8 +10,9 @@ import json
 import odrive
 from odrive.enums import *
 
-from base import configure, plots
+from Odrive_control import configure, plots
 import ML
+import ML_data
 ### EXECUTION TIME TOLERANCES
 exec_tolerance = 10/100
 reset_delays = 6
@@ -48,6 +49,23 @@ def check_gains(proposed):
     kv_int = min( max(prop_kv_int, k_limits[2][0]), k_limits[2][1](kv))
     return kp,kv,kv_int
 
+#revisar si puede definir el folde en el que guardar los archivos en el nombre
+def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='robo_trajs.json'):
+    traj_list = []
+    with open(traj_file, 'r') as t_file:
+        for traj in t_file:
+            traj_list.append(json.loads(traj))
+
+    #Opcion de randomizar orden de lista de trajectorias
+    for i in range(num_evos):
+        print("Ejecutando ejercicio de entrenamiento "+str(i))
+        ires = evo_gains_ML(odrv, traj_list[i]['Trajectory'], traj_tag+'.json')
+        print("Ganador del ejercicio = ")
+        print(ires['gains'])
+
+    ML_data.build_ML_training_set(traj_tag+'.json', traj_tag+'.csv')
+
+
 def save_ML_data(gen_list, winner, traj_array, filename):
     now = time.localtime()
     newData = {
@@ -56,25 +74,13 @@ def save_ML_data(gen_list, winner, traj_array, filename):
         "traj": traj_array,
         "runs_data": gen_list
     }
-    '''
-    try:
-        with open('pretty_'+filename, 'r+') as master_file:
-            data = json.load(master_file)
-            data.append(newData)
-            master_file.seek(0)
-            json.dump(data, master_file, indent=2)
-    except FileNotFoundError:
-        with open('pretty_'+filename, 'w') as master_file:
-            json.dump([newData], master_file, indent=2)
-
     with open(filename, 'a') as lean_file:
         json.dump(newData, lean_file)
         lean_file.write('\n')
-    '''
 
-def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="v1.0.0.json"):
 
-    #ML.start(odrv)
+def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="evo_gains_Test.json"):
+
     global traj
     traj = traj_array
 
@@ -150,7 +156,7 @@ def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="v1.0.0.json"):
 
     ML.ML_print_group_trajs(plot_group)
     save_ML_data(historic, population[0].__dict__, traj_array, save_file)
-    return historic, population[0].__dict__, traj_array, save_file
+    return population[0].__dict__
 
 
 def get_exec_errors_data(odrv, traj):
