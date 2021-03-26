@@ -21,56 +21,6 @@ Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 
 '''
 
-import time
-from math import pi
-import numpy as np
-import matplotlib.pyplot as plt
-
-import odrive
-from odrive.enums import *
-from odrive.utils import dump_errors
-
-from Odrive_control import robo
-from Odrive_control import calibrate
-from Odrive_control import configure
-from Odrive_control import move
-from Odrive_control import plots
-from Odrive_control import trajectory
-from Odrive_control import timetest
-sleep_error = .0007
-input_delay = .00124
-data_delay = .0021
-input_sleep_adjust = sleep_error+input_delay
-T = .02 #seconds
-
-def start(odrv):
-
-    dump_errors(odrv,True)
-    if (odrv.axis0.encoder.config.pre_calibrated and odrv.axis1.encoder.config.pre_calibrated) != 1:
-        print("System not calibrated - proceeding to calibration Odrive_controld on index search")
-        calibrate.first_time_calibration(odrv)
-
-    configure.currents(odrv)
-    configure.velocity_limit(odrv)
-    configure.gains(odrv, gan_pos=25, gan_vel= 250/1000.0, gan_int_vel = 400/1000.0)
-    configure.trap_traj(odrv, vel_lim = 6, accel_lim = 48)
-
-    calibrate.set_encoder_zero(odrv)
-    time.sleep(.2)
-    ML_update_time_errors(odrv)
-
-    return "DONE start robo"
-
-def ML_update_time_errors(odrv, samples=100):
-    time.sleep(.1)
-    print("Adjusting update time errors")
-    global sleep_error, input_delay, data_delay, input_sleep_adjust
-    sleep_error = timetest.get_sleep_error()
-    input_delay = timetest.get_input_pos_delay(odrv, samples)
-    data_delay = ML_get_info_read_delay(odrv, samples)
-    input_sleep_adjust = sleep_error+input_delay
-    return input_sleep_adjust
-
 def ML_get_info_read_delay(odrv, iters=100):
 
     outbound = [i*(-.25)/(iters//2) for i in range(0, iters//2)]
@@ -112,9 +62,29 @@ def ML_get_info_read_delay(odrv, iters=100):
     #print("Average read_info execution time is %0.5fms" % (read_del*1000))
     return read_delay
 
+import time
+from math import pi
+import numpy as np
+import matplotlib.pyplot as plt
+
+import odrive
+from odrive.enums import *
+from odrive.utils import dump_errors
+
+from Odrive_control import timetest
+timetest.get_info_read_delay = ML_get_info_read_delay
+from Odrive_control import robo
+robo.timetest.get_info_read_delay = ML_get_info_read_delay
+
+sleep_error = .0007
+input_delay = .00124
+data_delay = .0021
+input_sleep_adjust = sleep_error+input_delay
+T = .02 #seconds
+
 
 def ML_trajectory(pos1=0, pos2=pi, t=.5):
-    traj_data = trajectory.build_trajectory(pos1, pos2, t1=t, t2=t, res = 2*t/.02)
+    traj_data = robo.trajectory.build_trajectory(pos1, pos2, t1=t, t2=t, res = 2*t/.02)
     ML_traj = [[traj_data["OUTBOUND"][i], traj_data["OUTBOUND"][i]] for i in range(len(traj_data["OUTBOUND"]))] + [[traj_data["RETURN"][i], traj_data["RETURN"][i]] for i in range(len(traj_data["RETURN"]))]
     return ML_traj
 

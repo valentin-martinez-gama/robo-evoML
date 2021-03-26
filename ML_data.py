@@ -1,15 +1,18 @@
 import pandas as pd
 import json
+import csv
 
 def build_traj_from_csv(in_file, traj_tag, out_file='robo_trajs.json'):
     with open(in_file, 'r') as csv_traj:
-        pos_set_a0 = csv_traj.readline()
-        pos_set_a1 = csv_traj.readline()
 
-        traj = zip(pos_set_a0, pos_set_a1)
+        traj_data = list(csv.reader(csv_traj))
+        pos_set_a0 = traj_data[0]
+        pos_set_a1 = traj_data[1]
+
+        traj = list(zip(pos_set_a0, pos_set_a1))
 
     with open(out_file, 'a') as list_traj:
-        json.dump({'Tag':traj_tag, 'Trajectory':traj})
+        json.dump({'Tag':traj_tag, 'Trajectory':traj}, list_traj)
         list_traj.write('\n')
 
 

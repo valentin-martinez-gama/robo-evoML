@@ -40,7 +40,8 @@ mutt_rate = .15
 
 k_range = (20,70)
 ### SAFETY LIMITS
-k_limits = ((k_range[0], k_range[1]), (lambda kp: .052+.00020*kp, lambda kp:.48-.005*kp), (0, lambda kv: kv*11))
+k_limits = ((k_range[0], k_range[1]), (lambda kp: .052+.00020*kp, lambda kp:.48-.005*kp), (0, lambda kv: -.0355*kv+5.72))
+#lambda kp:.48-.005*kp
 
 def check_gains(proposed):
     prop_kp, prop_kv, prop_kv_int = proposed
@@ -59,9 +60,10 @@ def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='robo_trajs.j
     #Opcion de randomizar orden de lista de trajectorias
     for i in range(num_evos):
         print("Ejecutando ejercicio de entrenamiento "+str(i))
-        ires = evo_gains_ML(odrv, traj_list[i]['Trajectory'], traj_tag+'.json')
+        print("Trayectoria: "+traj_list[i]['Tag'])
+        iter_result = evo_gains_ML(odrv, traj_list[i]['Trajectory'], traj_list[i]['Tag']+'.json')
         print("Ganador del ejercicio = ")
-        print(ires['gains'])
+        print(iter_result['gains'])
 
     ML_data.build_ML_training_set(traj_tag+'.json', traj_tag+'.csv')
 
