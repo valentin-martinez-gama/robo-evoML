@@ -1,0 +1,49 @@
+# .gitignore file for MATLAB projects
+
+# Windows default autosave extension
+*.asv
+
+# OSX / *nix default autosave extension
+*.m~
+
+# Compiled MEX binaries (all platforms)
+*.mex*
+
+# Packaged app and toolbox files
+*.mlappinstall
+*.mltbx
+
+# Generated helpsearch folders
+helpsearch*/
+
+# Simulink code generation folders
+slprj/
+sccprj/
+
+# Matlab code generation folders
+codegen/
+
+# Simulink autosave extension
+*.autosave
+
+*Simulink slx Simulation files - use mdl instead
+*.slx
+*.slxc
+
+# Octave session info
+octave-workspace
+
+#virtualenv for python
+env/
+
+#python_cache
+*.pyc
+__pycache__/
+
+#csv data
+*.csv
+
+devTests/
+
+#OSx cache files
+*.DS_Store
