@@ -16,7 +16,7 @@ import ML_data
 ### EXECUTION TIME TOLERANCES
 exec_tolerance = 10/100
 reset_delays = 6
-samples_error_test = 50
+samples_error_test = 75
 tolerance_fails = 0
 
 ### SAMPLING AND TRAJECTORY
@@ -57,10 +57,15 @@ def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='robo_trajs.j
         for traj in t_file:
             traj_list.append(json.loads(traj))
 
+    ML.robo.start(odrv)
     #Opcion de randomizar orden de lista de trajectorias
     for i in range(num_evos):
+        ML.robo.configure.gains(odrv)
+        odrv.axis0.controller.input_pos=traj_list[i]['Trajectory'][0][0]
+        odrv.axis0.controller.input_pos=traj_list[i]['Trajectory'][1][0]
         print("Ejecutando ejercicio de entrenamiento "+str(i))
         print("Trayectoria: "+traj_list[i]['Tag'])
+        time.sleep(.2)
         iter_result = evo_gains_ML(odrv, traj_list[i]['Trajectory'], traj_list[i]['Tag']+'.json')
         print("Ganador del ejercicio = ")
         print(iter_result['gains'])
@@ -215,14 +220,18 @@ def test_trajectory(odrv, traj, static_test_time=.25):
 
         end = time.perf_counter()
         exec_time = end-start
-        #print("TRAYECTORY TIME = " + str(exec_time))
+        print("TRAYECTORY TIME = " + str(exec_time))
         if abs(exec_time-tot_time) < tot_time*exec_tolerance:
             success = True
+            print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
         else:
             global tolerance_fails
             tolerance_fails += 1
             if tolerance_fails >= reset_delays:
-                ML.update_time_errors(odrv, samples_error_test)
+                ML.robo.update_time_errors(odrv, samples_error_test)
+                odrv.axis0.controller.input_pos=traj[0][0]
+                odrv.axis0.controller.input_pos=traj[1][0]
+                time.sleep(.2)
                 tolerance_fails = 0
     #End While not Succes loop
     for _ in range(round(static_test_time/T_input)):

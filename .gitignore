@@ -42,6 +42,7 @@ __pycache__/
 
 #csv data
 *.csv
+!CSV_Trajs/*.csv
 
 devTests/
 
