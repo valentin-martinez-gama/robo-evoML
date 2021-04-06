@@ -21,13 +21,20 @@ Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 
 '''
 
-def ML_get_info_read_delay(odrv, iters=100):
+import time
+from math import pi
+import numpy as np
+import matplotlib.pyplot as plt
 
+import odrive
+from odrive.enums import *
+from odrive.utils import dump_errors
+
+def ML_get_info_read_delay(odrv, iters=100):
     outbound = [i*(-.25)/(iters//2) for i in range(0, iters//2)]
     ret = list(outbound)
     ret.reverse()
     points = (outbound+ret)
-
     pos_set_a0 = []
     pos_set_a1 = []
     pos_estimates_a0 = []
@@ -37,12 +44,10 @@ def ML_get_info_read_delay(odrv, iters=100):
     current_estimate_a0 = []
     current_estimate_a1 = []
     delays = []
-
     for p in points:
         odrv.axis0.controller.input_pos = p
         odrv.axis1.controller.input_pos = p
         time.sleep(.01)
-
         start = time.perf_counter()
         pos_set_a0.append(p)
         pos_set_a1.append(p)
@@ -54,56 +59,36 @@ def ML_get_info_read_delay(odrv, iters=100):
         current_estimate_a1.append(odrv.axis1.motor.current_control.Iq_measured)
         end = time.perf_counter()
         delays.append(end-start)
-
     odrv.axis0.controller.input_pos = 0
     odrv.axis1.controller.input_pos = 0
-
     read_delay = sum(delays)/len(delays)
-    print("CAMBIO read_info execution time is %0.5fms" % (read_delay*1000))
+    print("ML read_info execution time is %0.5fms" % (read_delay*1000))
     return read_delay
-
-import time
-from math import pi
-import numpy as np
-import matplotlib.pyplot as plt
-
-import odrive
-from odrive.enums import *
-from odrive.utils import dump_errors
 
 from Odrive_control import timetest
 timetest.get_info_read_delay = ML_get_info_read_delay
-from Odrive_control import robo
-robo.timetest.get_info_read_delay = ML_get_info_read_delay
-
-ML_input_delay = .0001
-ML_data_delay = .0001
-T = .02 #seconds
-
-def ML_start(odrv):
-
-    dump_errors(odrv,True)
-    if (odrv.axis0.encoder.config.pre_calibrated and odrv.axis1.encoder.config.pre_calibrated) != 1:
-        print("System not calibrated - proceeding to calibration based on index search")
-        calibrate.first_time_calibration(odrv)
-
-    robo.configure.currents(odrv)
-    robo.configure.velocity_limit(odrv)
-    robo.configure.gains(odrv, gan_pos=25, gan_vel= 250/1000.0, gan_int_vel = 400/1000.0)
-
-    robo.calibrate.set_encoder_zero(odrv)
-    time.sleep(.2)
-    ML_update_time_errors(odrv)
-    return "DONE start ML_robo"
 
 def ML_update_time_errors(odrv, samples=100):
     time.sleep(.1)
     print("Adjusting update time errors")
     global ML_input_delay, ML_data_delay
     ML_input_delay = timetest.get_input_pos_delay(odrv, samples)
-    ML_data_delay = timetest.get_info_read_delay(odrv, samples)
-
+    ML_data_delay = timetst.get_info_read_delay(odrv, samples)
     return (ML_input_delay+ML_data_delay)*1000
+
+from Odrive_control import robo
+robo.update_time_errors = ML_update_time_errors
+
+ML_input_delay = .0015
+ML_data_delay = .0035
+T = .02 #seconds
+
+def ML_sleep(duration, get_now=time.perf_counter):
+    now = get_now()
+    end = now + duration
+    while now < end:
+        now = get_now()
+
 
 def ML_trajectory(pos1=0, pos2=pi, t=.5):
     traj_data = robo.trajectory.build_trajectory(pos1, pos2, t1=t, t2=t, res = 2*t/.02)
