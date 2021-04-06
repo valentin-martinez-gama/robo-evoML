@@ -21,6 +21,7 @@ tolerance_fails = 0
 
 ### SAMPLING AND TRAJECTORY
 T_input = .02 #seconds
+Sleep_T = .00144 #seconds
 traj = []
 
 ### VIBRATION TEST TOLERANCES ++ = MORE FLEXIBILITY
@@ -38,7 +39,7 @@ survivors = 4
 mutts = 6
 mutt_rate = .15
 
-k_range = (20,70)
+k_range = (20,50)
 ### SAFETY LIMITS
 k_limits = ((k_range[0], k_range[1]), (lambda kp: .052+.00020*kp, lambda kp:.48-.005*kp), (0, lambda kp,kv: (8+(kv/.052+.00020*kp)*3)*kv))
 #lambda kp:.48-.005*kp
@@ -57,7 +58,7 @@ def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='robo_trajs.j
         for traj in t_file:
             traj_list.append(json.loads(traj))
 
-    ML.robo.start(odrv)
+    ML.ML_start(odrv)
     #Opcion de randomizar orden de lista de trajectorias
     for i in range(num_evos):
         ML.robo.configure.gains(odrv)
@@ -201,9 +202,10 @@ def test_trajectory(odrv, traj, static_test_time=.25):
         odrv.axis1.controller.input_pos = traj[0][1]
         pset_0 = traj[0][0]
         pset_1 = traj[0][1]
-        time.sleep(T_input-ML.ML_sleep_error-ML.ML_input_delay)
+        time.sleep(T_input-ML.ML_input_delay)
 
         start = time.perf_counter()
+        i=0
         for p in traj:
             pos_set_a0.append(p[0])
             pos_set_a1.append(p[1])
@@ -216,12 +218,11 @@ def test_trajectory(odrv, traj, static_test_time=.25):
 
             odrv.axis0.controller.input_pos = p[0]
             odrv.axis1.controller.input_pos = p[1]
-            print(time.perf_counter())
-            time.sleep(float(T_input-ML.ML_sleep_error-ML.ML_input_delay - ML.ML_data_delay))
+            for n in range(1):
+                time.sleep(.015)
 
         end = time.perf_counter()
         exec_time = end-start
-        print("EXPECTED TIME = " + str(tot_time))
         print("TRAYECTORY TIME = " + str(exec_time))
         if abs(exec_time-tot_time) < tot_time*exec_tolerance:
             success = True
@@ -245,7 +246,8 @@ def test_trajectory(odrv, traj, static_test_time=.25):
         Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
         Iq_measured_a0.append(odrv.axis0.motor.current_control.Iq_measured)
         Iq_measured_a1.append(odrv.axis1.motor.current_control.Iq_measured)
-        time.sleep(float(T_input-ML.ML_sleep_error - ML.MLdata_delay))
+        for n in range(round((T_input-ML.ML_data_delay)/Sleep_T)):
+            time.sleep(Sleep_T)
 
     return {
     "pos_set_a0":pos_set_a0,

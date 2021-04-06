@@ -9,13 +9,14 @@ def check_sleep(amount):
     end = time.perf_counter()
     return end-start
 
-def get_sleep_error(mint=13, maxt=16+1, tinter=1):
+def get_sleep_error(mint=1420, maxt=1470, tinter=10):
     errs = []
-    reps = 40
+    reps = 50
     for sleep_time in range(mint, maxt, tinter):
-        error = sum([check_sleep(sleep_time/1000)-sleep_time/1000 for i in range(reps)])/reps
+        error = sum([check_sleep(sleep_time/1000000)-sleep_time/1000000 for i in range(reps)])/reps
         #print("Requested sleep time is %0.3fms" % (sleep_time/1))
         errs.append(error)
+        print(error)
 
     sleep_err = sum(errs)/len(errs)
     print("Average time.sleep() error is %0.5fms" % (sleep_err*1000))

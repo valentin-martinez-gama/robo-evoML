@@ -76,19 +76,34 @@ timetest.get_info_read_delay = ML_get_info_read_delay
 from Odrive_control import robo
 robo.timetest.get_info_read_delay = ML_get_info_read_delay
 
-ML_sleep_error = .0007
-ML_input_delay = .00124
-ML_data_delay = .0021
+ML_input_delay = .0001
+ML_data_delay = .0001
 T = .02 #seconds
+
+def ML_start(odrv):
+
+    dump_errors(odrv,True)
+    if (odrv.axis0.encoder.config.pre_calibrated and odrv.axis1.encoder.config.pre_calibrated) != 1:
+        print("System not calibrated - proceeding to calibration based on index search")
+        calibrate.first_time_calibration(odrv)
+
+    robo.configure.currents(odrv)
+    robo.configure.velocity_limit(odrv)
+    robo.configure.gains(odrv, gan_pos=25, gan_vel= 250/1000.0, gan_int_vel = 400/1000.0)
+
+    robo.calibrate.set_encoder_zero(odrv)
+    time.sleep(.2)
+    ML_update_time_errors(odrv)
+    return "DONE start ML_robo"
 
 def ML_update_time_errors(odrv, samples=100):
     time.sleep(.1)
     print("Adjusting update time errors")
-    global ML_sleep_error, ML_input_delay, ML_data_delay
-    ML_sleep_error = timetest.get_sleep_error()
+    global ML_input_delay, ML_data_delay
     ML_input_delay = timetest.get_input_pos_delay(odrv, samples)
     ML_data_delay = timetest.get_info_read_delay(odrv, samples)
-    return sum((ML_sleep_error, ML_input_delay, ML_data_delay))
+
+    return (ML_input_delay+ML_data_delay)*1000
 
 def ML_trajectory(pos1=0, pos2=pi, t=.5):
     traj_data = robo.trajectory.build_trajectory(pos1, pos2, t1=t, t2=t, res = 2*t/.02)
