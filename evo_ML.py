@@ -40,14 +40,14 @@ mutt_rate = .15
 
 k_range = (20,70)
 ### SAFETY LIMITS
-k_limits = ((k_range[0], k_range[1]), (lambda kp: .052+.00020*kp, lambda kp:.48-.005*kp), (0, lambda kv: -.0355*kv+5.72))
+k_limits = ((k_range[0], k_range[1]), (lambda kp: .052+.00020*kp, lambda kp:.48-.005*kp), (0, lambda kp,kv: (8+(kv/.052+.00020*kp)*3)*kv))
 #lambda kp:.48-.005*kp
 
 def check_gains(proposed):
     prop_kp, prop_kv, prop_kv_int = proposed
     kp = min( max(prop_kp, k_limits[0][0]), k_limits[0][1])
     kv = min( max(prop_kv, k_limits[1][0](kp)), k_limits[1][1](kp))
-    kv_int = min( max(prop_kv_int, k_limits[2][0]), k_limits[2][1](kv))
+    kv_int = min( max(prop_kv_int, k_limits[2][0]), k_limits[2][1](kp,kv))
     return kp,kv,kv_int
 
 #revisar si puede definir el folde en el que guardar los archivos en el nombre
@@ -122,7 +122,7 @@ def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="evo_gains_Test.
     for n in range(0, pop_size):
         kp = r_uni(k_range[0], k_range[1])
         kv = r_uni(k_limits[1][0](kp), k_limits[1][1](kp))
-        kvi = r_uni(k_limits[2][0], k_limits[2][1](kv))
+        kvi = r_uni(k_limits[2][0], k_limits[2][1](kp,kv))
         population.append(Individual(0, check_gains([kp, kv, kvi])))
 
     plot_group.append(population[0])
@@ -184,7 +184,7 @@ def get_exec_errors_data(odrv, traj):
 
 
 def test_trajectory(odrv, traj, static_test_time=.25):
-    tot_time = T_input * len(traj)
+    tot_time = T_input*len(traj)
 
     success = False
     while not success:
@@ -201,7 +201,7 @@ def test_trajectory(odrv, traj, static_test_time=.25):
         odrv.axis1.controller.input_pos = traj[0][1]
         pset_0 = traj[0][0]
         pset_1 = traj[0][1]
-        time.sleep(T_input-ML.input_sleep_adjust)
+        time.sleep(T_input-ML.ML_sleep_error-ML.ML_input_delay)
 
         start = time.perf_counter()
         for p in traj:
@@ -216,19 +216,21 @@ def test_trajectory(odrv, traj, static_test_time=.25):
 
             odrv.axis0.controller.input_pos = p[0]
             odrv.axis1.controller.input_pos = p[1]
-            time.sleep(float(T_input-ML.input_sleep_adjust-ML.data_delay))
+            print(time.perf_counter())
+            time.sleep(float(T_input-ML.ML_sleep_error-ML.ML_input_delay - ML.ML_data_delay))
 
         end = time.perf_counter()
         exec_time = end-start
+        print("EXPECTED TIME = " + str(tot_time))
         print("TRAYECTORY TIME = " + str(exec_time))
         if abs(exec_time-tot_time) < tot_time*exec_tolerance:
             success = True
-            print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
         else:
             global tolerance_fails
             tolerance_fails += 1
             if tolerance_fails >= reset_delays:
-                ML.robo.update_time_errors(odrv, samples_error_test)
+                print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
+                ML.ML_update_time_errors(odrv, samples_error_test)
                 odrv.axis0.controller.input_pos=traj[0][0]
                 odrv.axis0.controller.input_pos=traj[1][0]
                 time.sleep(.2)
@@ -243,7 +245,7 @@ def test_trajectory(odrv, traj, static_test_time=.25):
         Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
         Iq_measured_a0.append(odrv.axis0.motor.current_control.Iq_measured)
         Iq_measured_a1.append(odrv.axis1.motor.current_control.Iq_measured)
-        time.sleep(float(T_input-ML.data_delay))
+        time.sleep(float(T_input-ML.ML_sleep_error - ML.MLdata_delay))
 
     return {
     "pos_set_a0":pos_set_a0,
