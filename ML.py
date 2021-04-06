@@ -73,7 +73,7 @@ def ML_update_time_errors(odrv, samples=100):
     print("Adjusting update time errors")
     global ML_input_delay, ML_data_delay
     ML_input_delay = timetest.get_input_pos_delay(odrv, samples)
-    ML_data_delay = timetst.get_info_read_delay(odrv, samples)
+    ML_data_delay = timetest.get_info_read_delay(odrv, samples)
     return (ML_input_delay+ML_data_delay)*1000
 
 from Odrive_control import robo

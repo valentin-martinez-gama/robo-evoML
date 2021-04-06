@@ -171,7 +171,8 @@ def get_exec_errors_data(odrv, traj):
     time.sleep(.3-static_test_time)
 
     global g_data
-    g_data = test_trajectory(odrv, traj, static_test_time)
+    data = test_trajectory(odrv, traj, static_test_time)
+    g_data=data
     t_data = {}
     s_data = {}
     for field in data:
@@ -220,7 +221,7 @@ def test_trajectory(odrv, traj, static_test_time=.25):
             odrv.axis0.controller.input_pos = p[0]
             odrv.axis1.controller.input_pos = p[1]
 
-            ML_sleep(T_input-ML.ML_input_delay-ML.ML_data_delay)
+            ML.ML_sleep(T_input-ML.ML_input_delay-ML.ML_data_delay)
 
         end = time.perf_counter()
         exec_time = end-start
@@ -247,7 +248,7 @@ def test_trajectory(odrv, traj, static_test_time=.25):
         Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
         Iq_measured_a0.append(odrv.axis0.motor.current_control.Iq_measured)
         Iq_measured_a1.append(odrv.axis1.motor.current_control.Iq_measured)
-        ML_sleep(T_input-ML.ML_data_delay)
+        ML.ML_sleep(T_input-ML.ML_data_delay)
 
     return {
     "pos_set_a0":pos_set_a0,
