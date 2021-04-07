@@ -17,7 +17,7 @@ import ML_data
 ### EXECUTION TIME TOLERANCES
 exec_tolerance = 10/100
 reset_delays = 6
-samples_error_test = 75
+samples_error_test = 50
 tolerance_fails = 0
 
 ### SAMPLING AND TRAJECTORY
@@ -28,7 +28,7 @@ traj = []
 static_test_time = .25
 
 ### EVOLUTONARY PARAMETERS
-max_generations = 10
+max_generations = 5
 inf_cycle = False
 
 population = []
@@ -39,7 +39,7 @@ survivors = 4
 mutts = 6
 mutt_rate = .15
 
-k_range = (20,50)
+k_range = (20,60)
 ### SAFETY LIMITS
 k_limits = ((k_range[0], k_range[1]), (lambda kp: .052+.00020*kp, lambda kp:.48-.005*kp), (0, lambda kp,kv: (8+(kv/.052+.00020*kp)*3)*kv))
 #lambda kp:.48-.005*kp
@@ -62,12 +62,12 @@ def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='robo_trajs.j
     #Opcion de randomizar orden de lista de trajectorias
     for i in range(num_evos):
         ML.robo.configure.gains(odrv)
-        odrv.axis0.controller.input_pos=traj_list[i]['Trajectory'][0][0]
+        odrv.axis0.controller.input_pos=traj_list[i%len(traj_list)]['Trajectory'][0][0]
         odrv.axis0.controller.input_pos=traj_list[i]['Trajectory'][1][0]
         print("Ejecutando ejercicio de entrenamiento "+str(i))
         print("Trayectoria: "+traj_list[i]['Tag'])
         time.sleep(.2)
-        iter_result = evo_gains_ML(odrv, traj_list[i]['Trajectory'], traj_list[i]['Tag']+'.json')
+        iter_result = evo_gains_ML(odrv, traj_list[i]['Trajectory'], training_tag+'.json')
         print("Ganador del ejercicio = ")
         print(iter_result['gains'])
 
@@ -82,7 +82,7 @@ def save_ML_data(gen_list, winner, traj_array, filename):
         "traj": traj_array,
         "runs_data": gen_list
     }
-    with open(filename, 'a') as lean_file:
+    with open('Datasets/' + filename, 'a') as lean_file:
         json.dump(newData, lean_file)
         lean_file.write('\n')
 
@@ -221,7 +221,7 @@ def test_trajectory(odrv, traj, static_test_time=.25):
             odrv.axis0.controller.input_pos = p[0]
             odrv.axis1.controller.input_pos = p[1]
 
-            ML.ML_sleep(T_input-ML.ML_input_delay-ML.ML_data_delay)
+            ML.ML_sleep(T_input-(ML.ML_input_delay+ML.ML_data_delay)*.75)
 
         end = time.perf_counter()
         exec_time = end-start
@@ -248,7 +248,7 @@ def test_trajectory(odrv, traj, static_test_time=.25):
         Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
         Iq_measured_a0.append(odrv.axis0.motor.current_control.Iq_measured)
         Iq_measured_a1.append(odrv.axis1.motor.current_control.Iq_measured)
-        ML.ML_sleep(T_input-ML.ML_data_delay)
+        ML.ML_sleep(T_input-ML.ML_data_delay*.75)
 
     return {
     "pos_set_a0":pos_set_a0,

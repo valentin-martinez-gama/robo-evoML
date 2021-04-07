@@ -22,10 +22,13 @@ def get_sleep_error(mint=1420, maxt=1470, tinter=10):
     print("Average time.sleep() error is %0.5fms" % (sleep_err*1000))
     return sleep_err
 
-def get_input_pos_delay(odrv, iters=100):
+def get_input_pos_delay(odrv, iters=50):
     delays = []
 
-    outbound = [i*.25/(iters//2) for i in range(0, iters//2)]
+    p_init_0 = odrv.axis0.controller.pos_estimate
+    p_init_1 = odrv.axis1.controller.pos_estimate
+
+    outbound = [i*.1/(iters//2) for i in range(0, iters//2)]
     ret = list(outbound)
     ret.reverse()
     points = (outbound+ret)

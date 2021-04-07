@@ -6,8 +6,8 @@ def build_traj_from_csv(in_file, traj_tag, out_file='robo_trajs.json'):
     with open(in_file, 'r') as csv_traj:
 
         traj_data = list(csv.reader(csv_traj))
-        pos_set_a0 = traj_data[0]
-        pos_set_a1 = traj_data[1]
+        pos_set_a0 = [float(p) for p in traj_data[0]]
+        pos_set_a1 = [float(p) for p in traj_data[1]]
 
         traj = list(zip(pos_set_a0, pos_set_a1))
 
