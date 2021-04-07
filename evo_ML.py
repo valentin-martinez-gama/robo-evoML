@@ -52,9 +52,10 @@ def check_gains(proposed):
     return kp,kv,kv_int
 
 #revisar si puede definir el folde en el que guardar los archivos en el nombre
-def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='Traj_sets/robo_trajs.json'):
+def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='robo_trajs.json'):
+    traj_dir='Trajectories'
     traj_list = []
-    with open(traj_file, 'r') as t_file:
+    with open(traj_dir+traj_file, 'r') as t_file:
         for traj in t_file:
             traj_list.append(json.loads(traj))
 
