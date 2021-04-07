@@ -25,7 +25,7 @@ def start(odrv):
     configure.currents(odrv)
     configure.velocity_limit(odrv)
     configure.gains(odrv, gan_pos=25, gan_vel= 250/1000.0, gan_int_vel = 400/1000.0)
-    configure.trap_traj(odrv, vel_lim = 6, accel_lim = 48)
+    configure.trap_traj(odrv, vel_lim = 1, accel_lim = 8)
 
     calibrate.set_encoder_zero(odrv)
     time.sleep(.2)

@@ -9,21 +9,26 @@ def check_sleep(amount):
     end = time.perf_counter()
     return end-start
 
-def get_sleep_error(mint=2, maxt=4+1, tinter=1):
+def get_sleep_error(mint=1420, maxt=1470, tinter=10):
     errs = []
+    reps = 50
     for sleep_time in range(mint, maxt, tinter):
-        error = sum(check_sleep(sleep_time/1000)-sleep_time/1000 for i in range(100))*8
+        error = sum([check_sleep(sleep_time/1000000)-sleep_time/1000000 for i in range(reps)])/reps
         #print("Requested sleep time is %0.3fms" % (sleep_time/1))
         errs.append(error)
+        print(error)
 
-    sleep_err = sum(errs)/len(errs)/1000
-    #print("Average time.sleep() error is %0.5fms" % (sleep_err*1000))
+    sleep_err = sum(errs)/len(errs)
+    print("Average time.sleep() error is %0.5fms" % (sleep_err*1000))
     return sleep_err
 
-def get_input_pos_delay(odrv, iters=100):
+def get_input_pos_delay(odrv, iters=50):
     delays = []
 
-    outbound = [i*.25/(iters//2) for i in range(0, iters//2)]
+    p_init_0 = odrv.axis0.controller.pos_estimate
+    p_init_1 = odrv.axis1.controller.pos_estimate
+
+    outbound = [i*.1/(iters//2) for i in range(0, iters//2)]
     ret = list(outbound)
     ret.reverse()
     points = (outbound+ret)
@@ -40,7 +45,7 @@ def get_input_pos_delay(odrv, iters=100):
     odrv.axis1.controller.input_pos = 0
 
     input_del = sum(delays)/len(delays)
-    #print("Average input_pos execution time is %0.5fms" % (input_del*1000))
+    print("Average input_pos execution time is %0.5fms" % (input_del*1000))
     return input_del
 
 def get_info_read_delay(odrv, iters=100):
