@@ -62,8 +62,9 @@ def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='robo_trajs.j
     #Opcion de randomizar orden de lista de trajectorias
     for i in range(num_evos):
         ML.robo.configure.gains(odrv)
+        ##ML.robo.move.trapezoidal()
         odrv.axis0.controller.input_pos=traj_list[i%len(traj_list)]['Trajectory'][0][0]
-        odrv.axis0.controller.input_pos=traj_list[i]['Trajectory'][1][0]
+        odrv.axis0.controller.input_pos=traj_list[i%len(traj_list)]['Trajectory'][1][0]
         print("Ejecutando ejercicio de entrenamiento "+str(i))
         print("Trayectoria: "+traj_list[i]['Tag'])
         time.sleep(.2)
@@ -71,7 +72,7 @@ def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='robo_trajs.j
         print("Ganador del ejercicio = ")
         print(iter_result['gains'])
 
-    ML_data.build_ML_training_set(traj_tag+'.json', traj_tag+'.csv')
+    ML_data.build_ML_training_set(training_tag+'.json', training_tag+'.csv')
 
 
 def save_ML_data(gen_list, winner, traj_array, filename):
