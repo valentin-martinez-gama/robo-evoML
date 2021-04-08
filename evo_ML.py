@@ -147,7 +147,7 @@ def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="evo_gains_Test.
 
 
 def get_exec_errors_data(odrv, traj):
-    time.sleep(.3-static_test_time)
+    ML.ML_sleep(.3-static_test_time)
 
     global g_data
     data = test_trajectory(odrv, traj, static_test_time)
@@ -179,14 +179,14 @@ def test_trajectory(odrv, traj, static_test_time=.25):
         Iq_measured_a0 = []
         Iq_measured_a1 = []
 
-        odrv.axis0.controller.input_pos = traj[0][0]
-        odrv.axis1.controller.input_pos = traj[0][1]
         pset_0 = traj[0][0]
         pset_1 = traj[0][1]
-        time.sleep(T_input-ML.ML_input_delay)
+        odrv.axis0.controller.input_pos = pset_0
+        odrv.axis1.controller.input_pos = pset_1
+        print("PUNTOS INICIALES "+str(pset_0)+'-'+str(pset_1))
+        ML.ML_sleep(T_input-ML.ML_input_delay)
 
         start = time.perf_counter()
-        i=0
         for p in traj:
             pos_set_a0.append(p[0])
             pos_set_a1.append(p[1])
@@ -214,7 +214,7 @@ def test_trajectory(odrv, traj, static_test_time=.25):
                 ML.ML_update_time_errors(odrv, samples_error_test)
                 odrv.axis0.controller.input_pos=traj[0][0]
                 odrv.axis0.controller.input_pos=traj[1][0]
-                time.sleep(.2)
+                ML.ML_sleep(.2)
                 tolerance_fails = 0
     #End While not Succes loop
     for _ in range(round(static_test_time/T_input)):
