@@ -33,10 +33,10 @@ inf_cycle = False
 
 population = []
 plot_group = []
-pop_size = 10
-elites = 2
-survivors = 4
-mutts = 6
+pop_size = 8
+elites = 1
+survivors = 3
+mutts = 5
 mutt_rate = .15
 
 k_range = (20,60)
@@ -183,7 +183,6 @@ def test_trajectory(odrv, traj, static_test_time=.25):
         pset_1 = traj[0][1]
         odrv.axis0.controller.input_pos = pset_0
         odrv.axis1.controller.input_pos = pset_1
-        print("PUNTOS INICIALES "+str(pset_0)+'-'+str(pset_1))
         ML.ML_sleep(T_input-ML.ML_input_delay)
 
         start = time.perf_counter()

@@ -2,21 +2,18 @@ import pandas as pd
 import json
 import csv
 
-def positive_turns(p):
-    if abs(p) > 1:
-        raise ValueError("La trayectoria contiene abs(puntos) > 1")
-    if p < 0:
-        return (1+p)
-    else:
-        return p
-
 def build_traj_from_csv(in_file, traj_tag, out_file='robo_trajs.json'):
     traj_dir='Trajectories/'
     with open(traj_dir+in_file, 'r') as csv_traj:
 
         traj_data = list(csv.reader(csv_traj))
-        pos_set_a0 = map(positive_turns, [float(p) for p in traj_data[0]])
-        pos_set_a1 = map(positive_turns, [float(p) for p in traj_data[1]])
+        pos_set_a0 = [float(p) for p in traj_data[0]]
+        pos_set_a1 = [float(p) for p in traj_data[1]]#
+
+        if any (p < 0 for p in pos_set_a0):
+            pos_set_a0 = [p+1 for p in pos_set_a0]
+        if any (p < 0 for p in pos_set_a1):
+            pos_set_a0 = [p+1 for p in pos_set_a1]
 
         traj = list(zip(pos_set_a0, pos_set_a1))
 
