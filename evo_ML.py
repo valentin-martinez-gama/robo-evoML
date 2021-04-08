@@ -52,29 +52,6 @@ def check_gains(proposed):
     return kp,kv,kv_int
 
 #revisar si puede definir el folde en el que guardar los archivos en el nombre
-def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='robo_trajs.json'):
-    traj_dir='Trajectories'
-    traj_list = []
-    with open(traj_dir+traj_file, 'r') as t_file:
-        for traj in t_file:
-            traj_list.append(json.loads(traj))
-
-    ML.robo.start(odrv)
-    #Opcion de randomizar orden de lista de trajectorias
-    for i in range(num_evos):
-        ML.robo.configure.gains(odrv)
-        ##ML.robo.move.trapezoidal()
-        odrv.axis0.controller.input_pos=traj_list[i%len(traj_list)]['Trajectory'][0][0]
-        odrv.axis0.controller.input_pos=traj_list[i%len(traj_list)]['Trajectory'][1][0]
-        print("Ejecutando ejercicio de entrenamiento "+str(i))
-        print("Trayectoria: "+traj_list[i]['Tag'])
-        time.sleep(.2)
-        iter_result = evo_gains_ML(odrv, traj_list[i]['Trajectory'], training_tag+'.json')
-        print("Ganador del ejercicio = ")
-        print(iter_result['gains'])
-
-    ML_data.build_ML_training_set(training_tag+'.json', training_tag+'.csv')
-
 
 def save_ML_data(gen_list, winner, traj_array, filename):
     now = time.localtime()
@@ -227,7 +204,6 @@ def test_trajectory(odrv, traj, static_test_time=.25):
 
         end = time.perf_counter()
         exec_time = end-start
-        print("TRAYECTORY TIME = " + str(exec_time))
         if abs(exec_time-tot_time) < tot_time*exec_tolerance:
             success = True
         else:
