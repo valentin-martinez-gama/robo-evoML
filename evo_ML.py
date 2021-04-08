@@ -33,10 +33,10 @@ inf_cycle = False
 
 population = []
 plot_group = []
-pop_size = 10
-elites = 2
-survivors = 4
-mutts = 6
+pop_size = 8
+elites = 1
+survivors = 3
+mutts = 5
 mutt_rate = .15
 
 k_range = (20,60)
@@ -52,27 +52,6 @@ def check_gains(proposed):
     return kp,kv,kv_int
 
 #revisar si puede definir el folde en el que guardar los archivos en el nombre
-def traj_training(odrv, training_tag='Test', num_evos=5, traj_file='robo_trajs.json'):
-    traj_list = []
-    with open(traj_file, 'r') as t_file:
-        for traj in t_file:
-            traj_list.append(json.loads(traj))
-
-    ML.robo.start(odrv)
-    #Opcion de randomizar orden de lista de trajectorias
-    for i in range(num_evos):
-        ML.robo.configure.gains(odrv)
-        odrv.axis0.controller.input_pos=traj_list[i%len(traj_list)]['Trajectory'][0][0]
-        odrv.axis0.controller.input_pos=traj_list[i]['Trajectory'][1][0]
-        print("Ejecutando ejercicio de entrenamiento "+str(i))
-        print("Trayectoria: "+traj_list[i]['Tag'])
-        time.sleep(.2)
-        iter_result = evo_gains_ML(odrv, traj_list[i]['Trajectory'], training_tag+'.json')
-        print("Ganador del ejercicio = ")
-        print(iter_result['gains'])
-
-    ML_data.build_ML_training_set(traj_tag+'.json', traj_tag+'.csv')
-
 
 def save_ML_data(gen_list, winner, traj_array, filename):
     now = time.localtime()
@@ -168,7 +147,7 @@ def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="evo_gains_Test.
 
 
 def get_exec_errors_data(odrv, traj):
-    time.sleep(.3-static_test_time)
+    ML.ML_sleep(.3-static_test_time)
 
     global g_data
     data = test_trajectory(odrv, traj, static_test_time)
@@ -200,14 +179,13 @@ def test_trajectory(odrv, traj, static_test_time=.25):
         Iq_measured_a0 = []
         Iq_measured_a1 = []
 
-        odrv.axis0.controller.input_pos = traj[0][0]
-        odrv.axis1.controller.input_pos = traj[0][1]
         pset_0 = traj[0][0]
         pset_1 = traj[0][1]
-        time.sleep(T_input-ML.ML_input_delay)
+        odrv.axis0.controller.input_pos = pset_0
+        odrv.axis1.controller.input_pos = pset_1
+        ML.ML_sleep(T_input-ML.ML_input_delay)
 
         start = time.perf_counter()
-        i=0
         for p in traj:
             pos_set_a0.append(p[0])
             pos_set_a1.append(p[1])
@@ -225,7 +203,6 @@ def test_trajectory(odrv, traj, static_test_time=.25):
 
         end = time.perf_counter()
         exec_time = end-start
-        print("TRAYECTORY TIME = " + str(exec_time))
         if abs(exec_time-tot_time) < tot_time*exec_tolerance:
             success = True
         else:
@@ -236,7 +213,7 @@ def test_trajectory(odrv, traj, static_test_time=.25):
                 ML.ML_update_time_errors(odrv, samples_error_test)
                 odrv.axis0.controller.input_pos=traj[0][0]
                 odrv.axis0.controller.input_pos=traj[1][0]
-                time.sleep(.2)
+                ML.ML_sleep(.2)
                 tolerance_fails = 0
     #End While not Succes loop
     for _ in range(round(static_test_time/T_input)):

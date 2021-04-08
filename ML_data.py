@@ -3,15 +3,21 @@ import json
 import csv
 
 def build_traj_from_csv(in_file, traj_tag, out_file='robo_trajs.json'):
-    with open(in_file, 'r') as csv_traj:
+    traj_dir='Trajectories/'
+    with open(traj_dir+in_file, 'r') as csv_traj:
 
         traj_data = list(csv.reader(csv_traj))
         pos_set_a0 = [float(p) for p in traj_data[0]]
-        pos_set_a1 = [float(p) for p in traj_data[1]]
+        pos_set_a1 = [float(p) for p in traj_data[1]]#
+
+        if any (p < 0 for p in pos_set_a0):
+            pos_set_a0 = [p+1 for p in pos_set_a0]
+        if any (p < 0 for p in pos_set_a1):
+            pos_set_a0 = [p+1 for p in pos_set_a1]
 
         traj = list(zip(pos_set_a0, pos_set_a1))
 
-    with open(out_file, 'a') as list_traj:
+    with open(traj_dir+out_file, 'a') as list_traj:
         json.dump({'Tag':traj_tag, 'Trajectory':traj}, list_traj)
         list_traj.write('\n')
 
@@ -25,7 +31,8 @@ def build_ML_training_set(in_file, out_file='out_file.csv', group_size=5):
     fix_names = ['win_K']
     master_ML_df = pd.DataFrame(columns=k_in_cols+error_cols+k_out_cols)
 
-    with open(in_file, 'r') as json_file:
+    data_dir = 'Datasets/'
+    with open(data_dir+in_file, 'r') as json_file:
         for evolution in json_file:
             evo_df = pd.DataFrame(columns=error_cols+k_in_cols)
             evo_data = json.loads(evolution)
@@ -55,4 +62,4 @@ def build_ML_training_set(in_file, out_file='out_file.csv', group_size=5):
             evo_df['out_Ki_vel'] = evo_data['winner']['gains']["Ki_vel"]
             master_ML_df = master_ML_df.append(evo_df)
 
-    master_ML_df.to_csv(out_file, index=False)
+    master_ML_df.to_csv(data_dir+out_file, index=False)

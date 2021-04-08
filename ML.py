@@ -30,8 +30,8 @@ import odrive
 from odrive.enums import *
 from odrive.utils import dump_errors
 
-def ML_get_info_read_delay(odrv, iters=100):
-    outbound = [i*(-.25)/(iters//2) for i in range(0, iters//2)]
+def ML_get_info_read_delay(odrv, iters=50):
+    outbound = [i*(-.0277)/(iters//2) for i in range(0, iters//2)]
     ret = list(outbound)
     ret.reverse()
     points = (outbound+ret)
@@ -47,7 +47,7 @@ def ML_get_info_read_delay(odrv, iters=100):
     for p in points:
         odrv.axis0.controller.input_pos = p
         odrv.axis1.controller.input_pos = p
-        time.sleep(.01)
+        ML_sleep(.02)
         start = time.perf_counter()
         pos_set_a0.append(p)
         pos_set_a1.append(p)
@@ -69,7 +69,7 @@ from Odrive_control import timetest
 timetest.get_info_read_delay = ML_get_info_read_delay
 
 def ML_update_time_errors(odrv, samples=100):
-    time.sleep(.1)
+    ML_sleep(.1)
     print("Adjusting update time errors")
     global ML_input_delay, ML_data_delay
     ML_input_delay = timetest.get_input_pos_delay(odrv, samples)

@@ -16,7 +16,7 @@ data_delay = .0021
 input_sleep_adjust = sleep_error+input_delay
 
 def start(odrv):
-
+    print("--------------------------------------")
     dump_errors(odrv,True)
     if (odrv.axis0.encoder.config.pre_calibrated and odrv.axis1.encoder.config.pre_calibrated) != 1:
         print("System not calibrated - proceeding to calibration based on index search")
@@ -24,14 +24,16 @@ def start(odrv):
 
     configure.currents(odrv)
     configure.velocity_limit(odrv)
-    configure.gains(odrv, gan_pos=25, gan_vel= 250/1000.0, gan_int_vel = 400/1000.0)
+    configure.gains(odrv)
     configure.trap_traj(odrv, vel_lim = 1, accel_lim = 8)
 
     calibrate.set_encoder_zero(odrv)
     time.sleep(.2)
     update_time_errors(odrv)
 
-    return "DONE start robo"
+    print("DONE start robo")
+    print("--------------------------------------")
+    print()
 
 def update_time_errors(odrv, samples=100):
     time.sleep(.1)

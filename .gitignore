@@ -42,7 +42,8 @@ __pycache__/
 
 #csv data
 *.csv
-!CSV_Trajs/*.csv
+!Trajectories/*.csv
+!Datasets/*.csv
 
 devTests/
 

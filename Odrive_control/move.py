@@ -53,7 +53,7 @@ def trajectory(odrv, loop = False, trajectory=trajectory.build_trajectory()):
 
     return "FIN trayectoria"
 
-def trapezoidal(odrv, loop=False, vel_lim=2, accel_lim=48, pos1=0, pos2=.5, t_inter=.1):
+def trapezoidal(odrv, loop=False, vel_lim=1, accel_lim=6, pos1=0, pos2=.5, t_inter=.1):
 
     configure.set_position_control(odrv)
     odrv.axis0.controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
