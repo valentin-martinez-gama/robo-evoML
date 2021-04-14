@@ -2,33 +2,37 @@ import pandas as pd
 import json
 import csv
 
+
 def build_traj_from_csv(in_file, traj_tag, out_file='robo_trajs.json'):
-    traj_dir='Trajectories/'
+    traj_dir = 'Trajectories/'
     with open(traj_dir+in_file, 'r') as csv_traj:
 
         traj_data = list(csv.reader(csv_traj))
         pos_set_a0 = [float(p) for p in traj_data[0]]
-        pos_set_a1 = [float(p) for p in traj_data[1]]#
+        pos_set_a1 = [float(p) for p in traj_data[1]]
 
-        if any (p < 0 for p in pos_set_a0):
+        if any(p < 0 for p in pos_set_a0):
             pos_set_a0 = [p+1 for p in pos_set_a0]
-        if any (p < 0 for p in pos_set_a1):
+        if any(p < 0 for p in pos_set_a1):
             pos_set_a0 = [p+1 for p in pos_set_a1]
 
         traj = list(zip(pos_set_a0, pos_set_a1))
 
     with open(traj_dir+out_file, 'a') as list_traj:
-        json.dump({'Tag':traj_tag, 'Trajectory':traj}, list_traj)
+        json.dump({'Tag': traj_tag, 'Trajectory': traj}, list_traj)
         list_traj.write('\n')
 
 
 def build_ML_training_set(in_file, out_file='out_file.csv', group_size=5):
 
-    error_cols = ['pos_error_'+ax+'_n'+str(g) for ax in ['a0','a1'] for g in range(group_size)]+['Iq_error_'+ax+'_n'+str(g) for ax in ['a0','a1'] for g in range(group_size)]
-    k_in_cols = ['in_Kp_pos','in_Kp_vel','in_Ki_vel']
-    k_out_cols = ['out_Kp_pos','out_Kp_vel','out_Ki_vel']
+    error_cols = [
+        'pos_error_'+ax+'_n'+str(g) for ax in ['a0', 'a1']
+        for g in range(group_size)]+['Iq_error_'+ax+'_n'+str(g)
+        for ax in ['a0', 'a1'] for g in range(group_size)]
 
-    fix_names = ['win_K']
+    k_in_cols = ['in_Kp_pos', 'in_Kp_vel', 'in_Ki_vel']
+    k_out_cols = ['out_Kp_pos', 'out_Kp_vel', 'out_Ki_vel']
+
     master_ML_df = pd.DataFrame(columns=k_in_cols+error_cols+k_out_cols)
 
     data_dir = 'Datasets/'

@@ -1,3 +1,11 @@
+import time
+from math import pi
+import numpy as np
+import matplotlib.pyplot as plt
+
+import odrive
+from odrive.enums import *
+
 '''
 Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 
@@ -15,20 +23,13 @@ Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 
     PREGUNTAS
 
-    Que cada motor evolucione sus propias gancias? Con scores (y papas) separados o con score suma?
+    Que cada motor evolucione sus propias gancias?
+    Con scores (y papas) separados o con score suma?
 
     Cuanta importancia para el estatico vs Trayectoria?
 
 '''
 
-import time
-from math import pi
-import numpy as np
-import matplotlib.pyplot as plt
-
-import odrive
-from odrive.enums import *
-from odrive.utils import dump_errors
 
 def ML_get_info_read_delay(odrv, iters=50):
     outbound = [i*(-.0277)/(iters//2) for i in range(0, iters//2)]
@@ -65,8 +66,10 @@ def ML_get_info_read_delay(odrv, iters=50):
     print("ML read_info execution time is %0.5fms" % (read_delay*1000))
     return read_delay
 
+
 from Odrive_control import timetest
 timetest.get_info_read_delay = ML_get_info_read_delay
+
 
 def ML_update_time_errors(odrv, samples=100):
     ML_sleep(.1)
@@ -76,12 +79,14 @@ def ML_update_time_errors(odrv, samples=100):
     ML_data_delay = timetest.get_info_read_delay(odrv, samples)
     return (ML_input_delay+ML_data_delay)*1000
 
+
 from Odrive_control import robo
 robo.update_time_errors = ML_update_time_errors
 
 ML_input_delay = .0015
 ML_data_delay = .0035
-T = .02 #seconds
+T = .02  # seconds
+
 
 def ML_sleep(duration, get_now=time.perf_counter):
     now = get_now()
@@ -91,9 +96,10 @@ def ML_sleep(duration, get_now=time.perf_counter):
 
 
 def ML_trajectory(pos1=0, pos2=pi, t=.5):
-    traj_data = robo.trajectory.build_trajectory(pos1, pos2, t1=t, t2=t, res = 2*t/.02)
+    traj_data = robo.trajectory.build_trajectory(pos1, pos2, t1=t, t2=t, res=2*t/.02)
     ML_traj = [[traj_data["OUTBOUND"][i], traj_data["OUTBOUND"][i]] for i in range(len(traj_data["OUTBOUND"]))] + [[traj_data["RETURN"][i], traj_data["RETURN"][i]] for i in range(len(traj_data["RETURN"]))]
     return ML_traj
+
 
 def ML_print_group_trajs(chosen):
     time_axis = []
@@ -102,13 +108,15 @@ def ML_print_group_trajs(chosen):
     inputss = []
     errorss = []
     for indiv in chosen:
-        time_axis.extend([t+accumulated_time for t in range(0,len(indiv.traj_data['pos_estimate_a1']+indiv.stat_data['pos_estimate_a1']))])
+        time_axis.extend([t+accumulated_time for t in range(
+        0, len(indiv.traj_data['pos_estimate_a1']+indiv.stat_data['pos_estimate_a1']))])
         accumulated_time = time_axis[-1]
+
         e = indiv.traj_data['pos_estimate_a1']+indiv.stat_data['pos_estimate_a1']
         estimatess.extend(e)
         i = indiv.traj_data['pos_set_a1']+indiv.stat_data['pos_set_a1']
         inputss.extend(i)
-        errorss.extend(list(np.multiply(25,np.square(np.subtract(np.array(i),np.array(e))))))
+        errorss.extend(list(np.multiply(25, np.abs(np.subtract(np.array(i), np.array(e))))))
     plt.plot(time_axis, estimatess)
     plt.plot(time_axis, inputss)
     plt.plot(time_axis, errorss)
