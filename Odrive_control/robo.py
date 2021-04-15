@@ -39,7 +39,7 @@ def update_time_errors(odrv, samples=100):
     time.sleep(.1)
     print("Adjusting update time errors")
     global sleep_error, input_delay, data_delay, input_sleep_adjust
-    sleep_error = timetest.get_sleep_error()
+    sleep_error = timetest.get_time_sleep_error()
     input_delay = timetest.get_input_pos_delay(odrv, samples)
     data_delay = timetest.get_info_read_delay(odrv, samples)
     input_sleep_adjust = sleep_error+input_delay

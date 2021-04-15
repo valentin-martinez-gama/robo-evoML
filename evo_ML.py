@@ -9,6 +9,7 @@ import odrive
 from odrive.enums import *
 
 from Odrive_control import configure
+from Odrive_control.timetest import robo_sleep
 import ML
 
 # EXECUTION TIME TOLERANCES
@@ -149,7 +150,7 @@ def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="eg_Tst.json"):
 
 
 def get_exec_errors_data(odrv, traj):
-    ML.ML_sleep(.3-STATIC_TEST_TIME)
+    robo_sleep(.3-STATIC_TEST_TIME)
 
     global g_data
     data = test_trajectory(odrv, traj, STATIC_TEST_TIME)
@@ -190,7 +191,7 @@ def test_trajectory(odrv, traj, STATIC_TEST_TIME=.25):
         pset_1 = traj[0][1]
         odrv.axis0.controller.input_pos = pset_0
         odrv.axis1.controller.input_pos = pset_1
-        ML.ML_sleep(T_INPUT-ML.ML_input_delay)
+        robo_sleep(T_INPUT-ML.ML_input_delay)
 
         start = time.perf_counter()
         for p in traj:
@@ -206,7 +207,7 @@ def test_trajectory(odrv, traj, STATIC_TEST_TIME=.25):
             odrv.axis0.controller.input_pos = p[0]
             odrv.axis1.controller.input_pos = p[1]
 
-            ML.ML_sleep(T_INPUT-(ML.ML_input_delay+ML.ML_data_delay)*.75)
+            robo_sleep(T_INPUT-(ML.ML_input_delay+ML.ML_data_delay)*.75)
 
         end = time.perf_counter()
         exec_time = end-start
@@ -220,7 +221,7 @@ def test_trajectory(odrv, traj, STATIC_TEST_TIME=.25):
                 ML.ML_update_time_errors(odrv, SAMPLES_ERROR_TEST)
                 odrv.axis0.controller.input_pos = traj[0][0]
                 odrv.axis0.controller.input_pos = traj[1][0]
-                ML.ML_sleep(.2)
+                time.sleepS(.2)
                 TOLERANCE_FAILS = 0
     # End While not Succes loop
     for _ in range(round(STATIC_TEST_TIME/T_INPUT)):
@@ -232,7 +233,7 @@ def test_trajectory(odrv, traj, STATIC_TEST_TIME=.25):
         Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
         Iq_measured_a0.append(odrv.axis0.motor.current_control.Iq_measured)
         Iq_measured_a1.append(odrv.axis1.motor.current_control.Iq_measured)
-        ML.ML_sleep(T_INPUT-ML.ML_data_delay*.75)
+        robo_sleep(T_INPUT-ML.ML_data_delay*.75)
 
     return {
         "pos_set_a0": pos_set_a0,

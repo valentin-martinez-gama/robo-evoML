@@ -3,7 +3,7 @@ import json
 import csv
 
 
-def build_traj_from_csv(in_file, traj_tag, out_file='robo_trajs.json'):
+def build_traj_from_csv(in_file, traj_tag, out_file='all_trajs.json'):
     traj_dir = 'Trajectories/'
     with open(traj_dir+in_file, 'r') as csv_traj:
 
@@ -14,7 +14,7 @@ def build_traj_from_csv(in_file, traj_tag, out_file='robo_trajs.json'):
         if any(p < 0 for p in pos_set_a0):
             pos_set_a0 = [p+1 for p in pos_set_a0]
         if any(p < 0 for p in pos_set_a1):
-            pos_set_a0 = [p+1 for p in pos_set_a1]
+            pos_set_a1 = [p+1 for p in pos_set_a1]
 
         traj = list(zip(pos_set_a0, pos_set_a1))
 

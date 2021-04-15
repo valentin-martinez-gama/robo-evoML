@@ -1,4 +1,5 @@
 import json
+from random import shuffle
 
 import odrive
 from odrive.enums import *
@@ -10,7 +11,7 @@ import evo_ML
 
 
 def traj_training(odrv, training_tag='Test',
-                  num_evos=5, traj_file='robo_trajs.json'):
+                  num_evos=5, traj_file='all_trajs.json'):
 
     traj_dir = 'Trajectories/'
     traj_list = []
@@ -21,6 +22,7 @@ def traj_training(odrv, training_tag='Test',
     trap_move_to_start(odrv, [.7, .7])
     ML.robo.start(odrv)
     # Opcion de randomizar orden de lista de trajectorias
+    shuffle(traj_list)
     for i in range(num_evos):
         lim_index = i % len(traj_list)
         s_p0 = traj_list[lim_index]['Trajectory'][0][0]

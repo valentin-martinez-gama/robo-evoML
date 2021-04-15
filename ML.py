@@ -32,7 +32,9 @@ Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 
 
 def ML_get_info_read_delay(odrv, iters=50):
-    outbound = [i*(-.0277)/(iters//2) for i in range(0, iters//2)]
+    p_init_0 = odrv.axis0.encoder.pos_estimate
+    p_init_1 = odrv.axis1.encoder.pos_estimate
+    outbound = [i*(-.027)/(iters//2) for i in range(0, iters//2)]
     ret = list(outbound)
     ret.reverse()
     points = (outbound+ret)
@@ -46,8 +48,8 @@ def ML_get_info_read_delay(odrv, iters=50):
     current_estimate_a1 = []
     delays = []
     for p in points:
-        odrv.axis0.controller.input_pos = p
-        odrv.axis1.controller.input_pos = p
+        odrv.axis0.controller.input_pos = p + p_init_0
+        odrv.axis1.controller.input_pos = p + p_init_1
         ML_sleep(.02)
         start = time.perf_counter()
         pos_set_a0.append(p)
@@ -60,8 +62,6 @@ def ML_get_info_read_delay(odrv, iters=50):
         current_estimate_a1.append(odrv.axis1.motor.current_control.Iq_measured)
         end = time.perf_counter()
         delays.append(end-start)
-    odrv.axis0.controller.input_pos = 0
-    odrv.axis1.controller.input_pos = 0
     read_delay = sum(delays)/len(delays)
     print("ML read_info execution time is %0.5fms" % (read_delay*1000))
     return read_delay
@@ -86,13 +86,6 @@ robo.update_time_errors = ML_update_time_errors
 ML_input_delay = .0015
 ML_data_delay = .0035
 T = .02  # seconds
-
-
-def ML_sleep(duration, get_now=time.perf_counter):
-    now = get_now()
-    end = now + duration
-    while now < end:
-        now = get_now()
 
 
 def ML_trajectory(pos1=0, pos2=pi, t=.5):
