@@ -1,13 +1,16 @@
 import json
 from random import shuffle
 
+import ML
+import ML_data
+import evo_ML
+
 import odrive
 from odrive.enums import *
 
 from Odrive_control import configure
-import ML
-import ML_data
-import evo_ML
+from Odrive_control.timetest import robo_sleep
+
 
 
 def traj_training(odrv, training_tag='Test',
@@ -31,11 +34,13 @@ def traj_training(odrv, training_tag='Test',
         trap_move_to_start(odrv, [s_p0, s_p1])
         print("Ejecutando ejercicio de entrenamiento "+str(i))
         print("Trayectoria: " + traj_list[lim_index]['Tag'])
-        ML.ML_sleep(.2)
+        robo_sleep(.2)
         iter_result = evo_ML.evo_gains_ML(
             odrv, traj_list[lim_index]['Trajectory'], training_tag+'.json')
+        print("--------------------------------------------------")
         print("Ganador del ejercicio = ")
         print(iter_result['gains'])
+        print()
 
     ML_data.build_ML_training_set(training_tag+'.json', training_tag+'.csv')
 
@@ -44,27 +49,27 @@ def trap_move_to_start(odrv, p_list):
     """ Solowly return robo the 0 position and next start configuration"""
     wait_time = 1.5
     axis = [odrv.axis0, odrv.axis1]
-    ML.robo.configure.gains(odrv, 20, .16, .32)
-    ML.robo.configure.trap_traj(odrv, vel_lim=.75, accel_lim=2)
+    configure.gains(odrv, 20, .16, .32)
+    configure.trap_traj(odrv, vel_lim=.75, accel_lim=2)
 
     for a in range(len(axis)):
         axis[a].controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
 
     # Regresar a 0
     axis[0].controller.input_pos = .25
-    ML.ML_sleep(wait_time)
+    robo_sleep(wait_time)
     axis[1].controller.input_pos = 0
-    ML.ML_sleep(wait_time)
+    robo_sleep(wait_time)
     axis[0].controller.input_pos = 0
-    ML.ML_sleep(wait_time)
+    robo_sleep(wait_time)
 
     # Ir a nueva posicion de inicio
     axis[0].controller.input_pos = .25
-    ML.ML_sleep(wait_time)
+    robo_sleep(wait_time)
     axis[1].controller.input_pos = p_list[1]
-    ML.ML_sleep(wait_time)
+    robo_sleep(wait_time)
     axis[0].controller.input_pos = p_list[0]
-    ML.ML_sleep(wait_time)
+    robo_sleep(wait_time)
 
     for a, real_pos in enumerate(p_list):
         axis[a].controller.config.input_mode = INPUT_MODE_PASSTHROUGH
@@ -75,36 +80,36 @@ def trap_move_to_start(odrv, p_list):
 '''
 def move_to_traj_start(odrv, p_list):
 
-    ML.robo.configure.gains(odrv, 25, .25, .4)
-    ML.robo.configure.trap_traj(odrv, vel_lim=1, accel_lim=3)
+    configure.gains(odrv, 25, .25, .4)
+    configure.trap_traj(odrv, vel_lim=1, accel_lim=3)
 
     for a in range(len(axis)):
         axis[a].controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
         axis[a].controller.input_pos = (axis[a].encoder.pos_estimate%1)//.5
-        ML.ML_sleep(.2)
-    ML.ML_sleep(.5)
+        robo_sleep(.2)
+    robo_sleep(.5)
 
     for a in range(len(axis)):
         axis[a].requested_state = 1
         axis[a].encoder.set_linear_count(0)
         axis[a].controller.input_pos = 0
-        ML.ML_sleep(.015)
+        robo_sleep(.015)
         axis[a].requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
     for a,targ_pos, in enumerate(p_list):
         safe_pos = targ_pos/abs(targ_pos)*(abs(targ_pos)%.5-
                     (abs(targ_pos)%1)//.5*.5)
         axis[a].controller.input_pos = safe_pos
-    ML.ML_sleep(.6)
+    robo_sleep(.6)
     input("A3")
     for a,real_pos in enumerate(p_list):
         axis[a].requested_state = 1
         axis[a].encoder.set_linear_count(real_pos)
         axis[a].controller.input_pos = real_pos
-        ML.ML_sleep(.015)
+        robo_sleep(.015)
         axis[a].requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
         axis[a].controller.config.input_mode = INPUT_MODE_PASSTHROUGH
-        ML.ML_sleep(.015)
+        robo_sleep(.015)
 
     return "DONE START TRAJ"
 '''

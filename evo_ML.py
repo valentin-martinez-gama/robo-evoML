@@ -144,7 +144,7 @@ def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="eg_Tst.json"):
     population.sort(key=lambda p: p.score)
     plot_group.append(population[0])
 
-    ML.ML_print_group_trajs(plot_group)
+    #ML.ML_print_group_trajs(plot_group)
     save_ML_data(historic, population[0].__dict__, traj_array, save_file)
     return population[0].__dict__
 
@@ -221,7 +221,7 @@ def test_trajectory(odrv, traj, STATIC_TEST_TIME=.25):
                 ML.ML_update_time_errors(odrv, SAMPLES_ERROR_TEST)
                 odrv.axis0.controller.input_pos = traj[0][0]
                 odrv.axis0.controller.input_pos = traj[1][0]
-                time.sleepS(.2)
+                time.sleep(.2)
                 TOLERANCE_FAILS = 0
     # End While not Succes loop
     for _ in range(round(STATIC_TEST_TIME/T_INPUT)):

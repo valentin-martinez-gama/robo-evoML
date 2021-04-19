@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import odrive
 from odrive.enums import *
 
+from Odrive_control.timetest import robo_sleep
 '''
 Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 
@@ -50,7 +51,7 @@ def ML_get_info_read_delay(odrv, iters=50):
     for p in points:
         odrv.axis0.controller.input_pos = p + p_init_0
         odrv.axis1.controller.input_pos = p + p_init_1
-        ML_sleep(.02)
+        robo_sleep(.02)
         start = time.perf_counter()
         pos_set_a0.append(p)
         pos_set_a1.append(p)
@@ -72,7 +73,7 @@ timetest.get_info_read_delay = ML_get_info_read_delay
 
 
 def ML_update_time_errors(odrv, samples=100):
-    ML_sleep(.1)
+    robo_sleep(.1)
     print("Adjusting update time errors")
     global ML_input_delay, ML_data_delay
     ML_input_delay = timetest.get_input_pos_delay(odrv, samples)
@@ -116,4 +117,3 @@ def ML_print_group_trajs(chosen):
     plt.xlabel("Muestreo")
     plt.ylabel("Posición")
     plt.legend(["Posición Actual", "Referencia", "Error"])
-    plt.show()
