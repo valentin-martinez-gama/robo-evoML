@@ -114,11 +114,15 @@ def set_encoder_zero(odrv, axis0_offset=460/8192, axis1_offset=(690+2048)/8192):
     odrv.axis1.controller.config.control_mode = CONTROL_MODE_POSITION_CONTROL
     odrv.axis0.controller.input_pos = axis0_offset
     odrv.axis1.controller.input_pos = axis1_offset
-    time.sleep(1)
+    time.sleep(.7)
+    odrv.axis0.requested_state = AXIS_STATE_IDLE
+    odrv.axis1.requested_state = AXIS_STATE_IDLE
     odrv.axis0.encoder.set_linear_count(0)
     odrv.axis1.encoder.set_linear_count(0)
     odrv.axis0.controller.input_pos = 0
     odrv.axis1.controller.input_pos = 0
+    odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
     return print("DONE set encoder zero")
 
