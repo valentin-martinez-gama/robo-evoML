@@ -5,9 +5,6 @@ from random import triangular as r_tri
 from random import choice as r_choice
 import numpy as np
 
-import odrive
-from odrive.enums import *
-
 from Odrive_control import configure
 from Odrive_control.timetest import robo_sleep
 import ML
@@ -69,7 +66,7 @@ def save_ML_data(gen_list, winner, traj_array, filename):
         lean_file.write('\n')
 
 
-def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="eg_Tst.json"):
+def evo_gains_ML(odrv, traj_array=ML.ML_trajectory(), save_file="nofile.json"):
 
     global traj
     traj = traj_array

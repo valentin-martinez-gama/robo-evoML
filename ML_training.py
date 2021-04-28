@@ -5,12 +5,10 @@ import ML
 import ML_data
 import evo_ML
 
-import odrive
 from odrive.enums import *
 
 from Odrive_control import configure
 from Odrive_control.timetest import robo_sleep
-
 
 
 def traj_training(odrv, training_tag='Test',
@@ -30,10 +28,11 @@ def traj_training(odrv, training_tag='Test',
         lim_index = i % len(traj_list)
         s_p0 = traj_list[lim_index]['Trajectory'][0][0]
         s_p1 = traj_list[lim_index]['Trajectory'][0][1]
-        print("Moviendose a "+str(s_p0)+'-'+str(s_p1))
-        trap_move_to_start(odrv, [s_p0, s_p1])
+        print("*************************************************")
         print("Ejecutando ejercicio de entrenamiento "+str(i))
         print("Trayectoria: " + traj_list[lim_index]['Tag'])
+        print("Moviendose a "+str(s_p0)+'-'+str(s_p1))
+        trap_move_to_start(odrv, [s_p0, s_p1])
         robo_sleep(.2)
         iter_result = evo_ML.evo_gains_ML(
             odrv, traj_list[lim_index]['Trajectory'], training_tag+'.json')
@@ -43,10 +42,11 @@ def traj_training(odrv, training_tag='Test',
         print()
 
     ML_data.build_ML_training_set(training_tag+'.json', training_tag+'.csv')
+    ML.robo.idle(odrv)
 
 
 def trap_move_to_start(odrv, p_list):
-    """ Solowly return robo the 0 position and next start configuration"""
+    """ Slowly return robo the 0 position and next start configuration"""
     wait_time = 1.5
     axis = [odrv.axis0, odrv.axis1]
     configure.gains(odrv, 20, .16, .32)
@@ -56,6 +56,9 @@ def trap_move_to_start(odrv, p_list):
         axis[a].controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
 
     # Regresar a 0
+    if axis[1].encoder.pos_estimate > .5:
+        axis[1].controller.input_pos = .75
+        robo_sleep(wait_time)
     axis[0].controller.input_pos = .25
     robo_sleep(wait_time)
     axis[1].controller.input_pos = 0
