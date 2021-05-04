@@ -1,12 +1,14 @@
-import time
+import json
+import csv
+from random import shuffle
 from math import pi
 import numpy as np
 import matplotlib.pyplot as plt
 
-import odrive
-from odrive.enums import *
-
+from Odrive_control import configure, robo
 from Odrive_control.timetest import robo_sleep
+
+from odrive.enums import *
 '''
 Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 
@@ -32,61 +34,92 @@ Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 '''
 
 
-def ML_get_info_read_delay(odrv, iters=50):
-    p_init_0 = odrv.axis0.encoder.pos_estimate
-    p_init_1 = odrv.axis1.encoder.pos_estimate
-    outbound = [i*(-.027)/(iters//2) for i in range(0, iters//2)]
-    ret = list(outbound)
-    ret.reverse()
-    points = (outbound+ret)
-    pos_set_a0 = []
-    pos_set_a1 = []
-    pos_estimates_a0 = []
-    pos_estimates_a1 = []
-    current_set_a0 = []
-    current_set_a1 = []
-    current_estimate_a0 = []
-    current_estimate_a1 = []
-    delays = []
-    for p in points:
-        odrv.axis0.controller.input_pos = p + p_init_0
-        odrv.axis1.controller.input_pos = p + p_init_1
-        robo_sleep(.02)
-        start = time.perf_counter()
-        pos_set_a0.append(p)
-        pos_set_a1.append(p)
-        pos_estimates_a0.append(odrv.axis0.encoder.pos_estimate)
-        pos_estimates_a1.append(odrv.axis1.encoder.pos_estimate)
-        current_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
-        current_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
-        current_estimate_a0.append(odrv.axis0.motor.current_control.Iq_measured)
-        current_estimate_a1.append(odrv.axis1.motor.current_control.Iq_measured)
-        end = time.perf_counter()
-        delays.append(end-start)
-    read_delay = sum(delays)/len(delays)
-    print("ML read_info execution time is %0.5fms" % (read_delay*1000))
-    return read_delay
+def traj_training(odrv, model,
+                  num_evos=5, traj_file='all_trajs.json'):
+
+    traj_dir = 'Trajectories/'
+    traj_list = []
+    with open(traj_dir+traj_file, 'r') as t_file:
+        for traj in t_file:
+            traj_list.append(json.loads(traj))
+
+    trap_move_to_start(odrv, [.7, .7])
+    robo.start(odrv)
+    # Opcion de randomizar orden de lista de trajectorias
+    shuffle(traj_list)
+    for i in range(num_evos):
+        lim_index = i % len(traj_list)
+        s_p0 = traj_list[lim_index]['Trajectory'][0][0]
+        s_p1 = traj_list[lim_index]['Trajectory'][0][1]
+        print("*************************************************")
+        print("Ejecutando ejercicio de entrenamiento "+str(i))
+        print("Trayectoria: " + traj_list[lim_index]['Tag'])
+        print("Moviendose a "+str(s_p0)+'-'+str(s_p1))
+        trap_move_to_start(odrv, [s_p0, s_p1])
+        robo_sleep(.2)
+        iter_result = model.evo_gains_ML(traj_list[lim_index]['Trajectory'])
+        print("--------------------------------------------------")
+        print("Ganador del ejercicio = ")
+        print(iter_result['gains'])
+        print()
+
+    model.build_ML_training_set(model.training_tag+'.json', model.training_tag+'.csv')
+    robo.idle(odrv)
 
 
-from Odrive_control import timetest
-timetest.get_info_read_delay = ML_get_info_read_delay
+def trap_move_to_start(odrv, p_list):
+    """ Slowly return robo the 0 position and next start configuration"""
+    wait_time = 1.5
+    axis = [odrv.axis0, odrv.axis1]
+    configure.gains(odrv, 20, .16, .32)
+    configure.trap_traj(odrv, vel_lim=.75, accel_lim=2)
+
+    for a in range(len(axis)):
+        axis[a].controller.config.input_mode = INPUT_MODE_TRAP_TRAJ
+
+    # Regresar a 0
+    if axis[1].encoder.pos_estimate > .5:
+        axis[1].controller.input_pos = .75
+        robo_sleep(wait_time)
+    axis[0].controller.input_pos = .25
+    robo_sleep(wait_time)
+    axis[1].controller.input_pos = 0
+    robo_sleep(wait_time)
+    axis[0].controller.input_pos = 0
+    robo_sleep(wait_time)
+
+    # Ir a nueva posicion de inicio
+    axis[0].controller.input_pos = .25
+    robo_sleep(wait_time)
+    axis[1].controller.input_pos = p_list[1]
+    robo_sleep(wait_time)
+    axis[0].controller.input_pos = p_list[0]
+    robo_sleep(wait_time)
+
+    for a, real_pos in enumerate(p_list):
+        axis[a].controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+
+    return print("DONE TRAP START MOVE")
 
 
-def ML_update_time_errors(odrv, samples=100):
-    robo_sleep(.1)
-    print("Adjusting update time errors")
-    global ML_input_delay, ML_data_delay
-    ML_input_delay = timetest.get_input_pos_delay(odrv, samples)
-    ML_data_delay = timetest.get_info_read_delay(odrv, samples)
-    return (ML_input_delay+ML_data_delay)*1000
+def build_traj_from_csv(in_file, traj_tag, out_file='all_trajs.json'):
+    traj_dir = 'Trajectories/'
+    with open(traj_dir+in_file, 'r') as csv_traj:
 
+        traj_data = list(csv.reader(csv_traj))
+        pos_set_a0 = [float(p) for p in traj_data[0]]
+        pos_set_a1 = [float(p) for p in traj_data[1]]
 
-from Odrive_control import robo
-robo.update_time_errors = ML_update_time_errors
+        if any(p < 0 for p in pos_set_a0):
+            pos_set_a0 = [p+1 for p in pos_set_a0]
+        if any(p < 0 for p in pos_set_a1):
+            pos_set_a1 = [p+1 for p in pos_set_a1]
 
-ML_input_delay = .0015
-ML_data_delay = .0035
-T = .02  # seconds
+        traj = list(zip(pos_set_a0, pos_set_a1))
+
+    with open(traj_dir+out_file, 'a') as list_traj:
+        json.dump({'Tag': traj_tag, 'Trajectory': traj}, list_traj)
+        list_traj.write('\n')
 
 
 def ML_trajectory(pos1=0, pos2=pi, t=.5):
@@ -102,8 +135,8 @@ def ML_print_group_trajs(chosen):
     inputss = []
     errorss = []
     for indiv in chosen:
-        time_axis.extend([t+accumulated_time for t in range(
-        0, len(indiv.traj_data['pos_estimate_a1']+indiv.stat_data['pos_estimate_a1']))])
+        time_axis.extend([t+accumulated_time for t in range(0,
+                        len(indiv.traj_data['pos_estimate_a1']+indiv.stat_data['pos_estimate_a1']))])
         accumulated_time = time_axis[-1]
 
         e = indiv.traj_data['pos_estimate_a1']+indiv.stat_data['pos_estimate_a1']

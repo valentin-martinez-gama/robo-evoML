@@ -1,9 +1,10 @@
 import time
 import json
+import pandas as pd
+import numpy as np
 from random import uniform as r_uni
 from random import triangular as r_tri
 from random import choice as r_choice
-import numpy as np
 
 from Odrive_control import configure
 from Odrive_control.timetest import robo_sleep
@@ -24,6 +25,10 @@ class evo_Model:
         self.training_tag = training_tag
         ML.robo.start(odrv, time_error=False)
         self.update_time_errors(odrv)
+        self.I_am()
+
+    def I_am(self):
+        print("I am Alpha")
     # EXECUTION TIME TOLERANCES
     EXEC_TOLERANCE = 10/100
     RESET_DELAYS = 6
@@ -74,8 +79,6 @@ class evo_Model:
             pos_estimate_a1 = []
             Iq_set_a0 = []
             Iq_set_a1 = []
-            Iq_measured_a0 = []
-            Iq_measured_a1 = []
 
             pset_0 = traj[0][0]
             pset_1 = traj[0][1]
@@ -91,13 +94,11 @@ class evo_Model:
                 pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
                 Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
                 Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
-                Iq_measured_a0.append(odrv.axis0.motor.current_control.Iq_measured)
-                Iq_measured_a1.append(odrv.axis1.motor.current_control.Iq_measured)
 
                 odrv.axis0.controller.input_pos = p[0]
                 odrv.axis1.controller.input_pos = p[1]
 
-                robo_sleep(self.T_INPUT-(ML.self.input_delay+self.data_delay)*.75)
+                robo_sleep(self.T_INPUT-(self.input_delay+self.data_delay)*.75)
 
             end = time.perf_counter()
             exec_time = end-start
@@ -107,7 +108,7 @@ class evo_Model:
                 self.TOLERANCE_FAILS += 1
                 if self.TOLERANCE_FAILS >= self.RESET_DELAYS:
                     print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
-                    ML.ML_update_time_errors(odrv, self.SAMPLES_ERROR_TEST)
+                    self.update_time_errors(odrv, self.SAMPLES_ERROR_TEST)
                     odrv.axis0.controller.input_pos = traj[0][0]
                     odrv.axis0.controller.input_pos = traj[1][0]
                     time.sleep(.2)
@@ -120,8 +121,6 @@ class evo_Model:
             pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
             Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
             Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
-            Iq_measured_a0.append(odrv.axis0.motor.current_control.Iq_measured)
-            Iq_measured_a1.append(odrv.axis1.motor.current_control.Iq_measured)
             robo_sleep(self.T_INPUT-self.data_delay*.75)
 
         return {
@@ -131,8 +130,6 @@ class evo_Model:
             "pos_estimate_a1": pos_estimate_a1,
             "Iq_set_a0": Iq_set_a0,
             "Iq_set_a1": Iq_set_a1,
-            "Iq_measured_a0": Iq_measured_a0,
-            "Iq_measured_a1": Iq_measured_a1,
         }
 
     def get_exec_errors_data(self):
@@ -169,6 +166,50 @@ class evo_Model:
         with open('Datasets/' + self.training_tag+'.json', 'a') as lean_file:
             json.dump(newData, lean_file)
             lean_file.write('\n')
+
+    def build_ML_training_set(in_file, out_file='out_file.csv', group_size=10):
+        error_cols = [
+            'pos_error_'+ax+'_n'+str(g) for ax in ['a0', 'a1']
+            for g in range(group_size)]+['Iq_set_'+ax+'_n'+str(g)
+            for ax in ['a0', 'a1'] for g in range(group_size)]
+
+        k_in_cols = ['in_Kp_pos', 'in_Kp_vel', 'in_Ki_vel']
+        k_out_cols = ['out_Kp_pos', 'out_Kp_vel', 'out_Ki_vel']
+
+        master_ML_df = pd.DataFrame(columns=k_in_cols+error_cols+k_out_cols)
+
+        data_dir = 'Datasets/'
+        with open(data_dir+in_file, 'r') as json_file:
+            for evolution in json_file:
+                evo_df = pd.DataFrame(columns=error_cols+k_in_cols)
+                evo_data = json.loads(evolution)
+
+                for generation in evo_data['runs_data']:
+                    for individual in generation:
+
+                        base_df = pd.DataFrame(individual['traj_data'])
+                        calc_df = pd.DataFrame()
+                        calc_df['pos_error_a0'] = base_df['pos_set_a0'] - base_df['pos_estimate_a0']
+                        calc_df['pos_error_a1'] = base_df['pos_set_a1'] - base_df['pos_estimate_a1']
+                        calc_df['Iq_set_a0'] = base_df['Iq_set_a0']
+                        calc_df['Iq_set_a1'] = base_df['Iq_set_a1']
+
+                        train_set = []
+                        for s in range(len(calc_df)-(group_size-1)):
+                            train_set.append(calc_df[s:s+group_size].values.ravel('F'))
+
+                        ind_df = pd.DataFrame(train_set, columns=error_cols)
+                        ind_df['in_Kp_pos'] = individual['gains']["Kp_pos"]
+                        ind_df['in_Kp_vel'] = individual['gains']["Kp_vel"]
+                        ind_df['in_Ki_vel'] = individual['gains']["Ki_vel"]
+                        evo_df = evo_df.append(ind_df)
+
+                evo_df['out_Kp_pos'] = evo_data['winner']['gains']["Kp_pos"]
+                evo_df['out_Kp_vel'] = evo_data['winner']['gains']["Kp_vel"]
+                evo_df['out_Ki_vel'] = evo_data['winner']['gains']["Ki_vel"]
+                master_ML_df = master_ML_df.append(evo_df)
+
+        master_ML_df.to_csv(data_dir+out_file, index=False)
 
     def evo_gains_ML(self, traj_array):
         self.traj = traj_array
@@ -282,8 +323,6 @@ class evo_Model:
         pos_estimates_a1 = []
         current_set_a0 = []
         current_set_a1 = []
-        current_estimate_a0 = []
-        current_estimate_a1 = []
         delays = []
         for p in points:
             odrv.axis0.controller.input_pos = p + p_init_0
@@ -296,8 +335,6 @@ class evo_Model:
             pos_estimates_a1.append(odrv.axis1.encoder.pos_estimate)
             current_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
             current_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
-            current_estimate_a0.append(odrv.axis0.motor.current_control.Iq_measured)
-            current_estimate_a1.append(odrv.axis1.motor.current_control.Iq_measured)
             end = time.perf_counter()
             delays.append(end-start)
         read_delay = sum(delays)/len(delays)
