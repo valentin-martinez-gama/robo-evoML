@@ -1,6 +1,5 @@
 from evo_Models.alfaModel import evo_Model
 import time
-import numpy as np
 from Odrive_control.timetest import robo_sleep
 
 
@@ -12,6 +11,11 @@ class beta_Model(evo_Model):
         self.plot = True
         self.Individual = self.beta_Individual
 
+    K_RANGE = (20, 70)
+    k_limits = ((K_RANGE[0], K_RANGE[1]),
+                (lambda kp: .052+.00020*kp, lambda kp: .48*1.3-.005*kp),
+                (0, lambda kp, kv: 10-.113*kp))
+
     class beta_Individual(evo_Model.Individual):
         def traj_test(indiv):
             traj = indiv._outer.traj
@@ -21,8 +25,8 @@ class beta_Model(evo_Model):
             success = False
 
             while not success:
-                pset_0 = traj[0][0]
-                pset_1 = traj[0][1]
+                pset_0 = lp0 = traj[0][0]
+                pset_1 = lp1 = traj[0][1]
                 odrv.axis0.controller.input_pos = pset_0
                 odrv.axis1.controller.input_pos = pset_1
                 robo_sleep(indiv._outer.T_INPUT-indiv._outer.input_delay)
@@ -40,8 +44,11 @@ class beta_Model(evo_Model):
                         indiv._t_pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
                         indiv._t_Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
                         indiv._t_Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
-                        indiv._t_pos_set_a0.append(p[0]/midpoints*i)
-                        indiv._t_pos_set_a1.append(p[1]/midpoints*i)
+                        indiv._t_pos_set_a0.append((p[0]-lp0)/midpoints*i+lp0)
+                        indiv._t_pos_set_a1.append((p[1]-lp1)/midpoints*i+lp1)
+
+                    lp0 = p[0]
+                    lp1 = p[1]
                 end = time.perf_counter()
 
                 exec_time = end-start

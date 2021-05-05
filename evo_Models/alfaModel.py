@@ -3,7 +3,6 @@ import json
 import pandas as pd
 import numpy as np
 from random import uniform as r_uni
-from random import triangular as r_tri
 from random import choice as r_choice
 
 from Odrive_control import configure
