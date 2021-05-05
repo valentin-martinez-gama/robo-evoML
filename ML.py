@@ -4,6 +4,7 @@ from random import shuffle
 from math import pi
 import numpy as np
 import matplotlib.pyplot as plt
+from importlib import reload
 
 from Odrive_control import configure, robo
 from Odrive_control.timetest import robo_sleep
@@ -43,8 +44,8 @@ def traj_training(odrv, model,
         for traj in t_file:
             traj_list.append(json.loads(traj))
 
-    trap_move_to_start(odrv, [.7, .7])
-    robo.start(odrv)
+    trap_move_to_start(odrv, [.65, .65])
+    robo.start(odrv, time_error=False)
     # Opcion de randomizar orden de lista de trajectorias
     shuffle(traj_list)
     for i in range(num_evos):
@@ -52,7 +53,7 @@ def traj_training(odrv, model,
         s_p0 = traj_list[lim_index]['Trajectory'][0][0]
         s_p1 = traj_list[lim_index]['Trajectory'][0][1]
         print("*************************************************")
-        print("Ejecutando ejercicio de entrenamiento "+str(i))
+        print("Ejecutando ejercicio de entrenamiento "+str(i+1))
         print("Trayectoria: " + traj_list[lim_index]['Tag'])
         print("Moviendose a "+str(s_p0)+'-'+str(s_p1))
         trap_move_to_start(odrv, [s_p0, s_p1])
@@ -62,8 +63,9 @@ def traj_training(odrv, model,
         print("Ganador del ejercicio = ")
         print(iter_result['gains'])
         print()
+        configure.gains(odrv)
 
-    model.build_ML_training_set(model.training_tag+'.json', model.training_tag+'.csv')
+    model.build_ML_training_set()
     robo.idle(odrv)
 
 
@@ -143,10 +145,11 @@ def ML_print_group_trajs(chosen):
         estimatess.extend(e)
         i = indiv.traj_data['pos_set_a1']+indiv.stat_data['pos_set_a1']
         inputss.extend(i)
-        errorss.extend(list(np.multiply(25, np.abs(np.subtract(np.array(i), np.array(e))))))
+        errorss.extend(list(np.multiply(5, np.abs(np.subtract(np.array(i), np.array(e))))))
     plt.plot(time_axis, estimatess)
     plt.plot(time_axis, inputss)
     plt.plot(time_axis, errorss)
     plt.xlabel("Muestreo")
     plt.ylabel("Posición")
     plt.legend(["Posición Actual", "Referencia", "Error"])
+    plt.show()

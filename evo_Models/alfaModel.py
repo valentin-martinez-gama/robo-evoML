@@ -24,11 +24,14 @@ class evo_Model:
         self.odrv = odrv
         self.training_tag = training_tag
         ML.robo.start(odrv, time_error=False)
-        self.update_time_errors(odrv)
+        self.update_time_errors()
         self.I_am()
+        self.outer = self
 
     def I_am(self):
         print("I am Alpha")
+        self.am = 'AlphaAF'
+    plot = False
     # EXECUTION TIME TOLERANCES
     EXEC_TOLERANCE = 10/100
     RESET_DELAYS = 6
@@ -66,93 +69,140 @@ class evo_Model:
         kv_int = min(max(prop_kv_int, k_limits[2][0]), k_limits[2][1](kp, kv))
         return kp, kv, kv_int
 
-    def test_trajectory(self):
-        odrv = self.odrv
-        traj = self.traj
-        tot_time = self.T_INPUT*len(traj)
+    class Individual:
+        def __init__(indiv, generation, gains, outer):
+            indiv._outer = outer
+            indiv.generation = generation
+            indiv.gains = {
+                "Kp_pos": gains[0],
+                "Kp_vel": gains[1],
+                "Ki_vel": gains[2]
+            }
+            configure.gains(outer.odrv, *gains)
+            te0, te1, se0, se1 = indiv.get_exec_errors_data()
+            indiv.errors = {
+                "traj_error_a0": te0,
+                "traj_error_a1": te1,
+                "stat_error_a0": se0,
+                "stat_error_a1": se1
+            }
+            indiv.score = te0+te1+se0+se1
+            indiv.build_data()
 
-        success = False
-        while not success:
-            pos_set_a0 = []
-            pos_set_a1 = []
-            pos_estimate_a0 = []
-            pos_estimate_a1 = []
-            Iq_set_a0 = []
-            Iq_set_a1 = []
+        def get_exec_errors_data(indiv):
+            robo_sleep(.3-indiv._outer.STATIC_TEST_TIME)
 
+            indiv._t_pos_set_a0 = []
+            indiv._t_pos_set_a1 = []
+            indiv._t_pos_estimate_a0 = []
+            indiv._t_pos_estimate_a1 = []
+            indiv._t_Iq_set_a0 = []
+            indiv._t_Iq_set_a1 = []
+
+            indiv._s_pos_set_a0 = []
+            indiv._s_pos_set_a1 = []
+            indiv._s_pos_estimate_a0 = []
+            indiv._s_pos_estimate_a1 = []
+            indiv._s_Iq_set_a0 = []
+            indiv._s_Iq_set_a1 = []
+
+            indiv.traj_test()
+            indiv.static_test()
+
+            traj_error_a0 = sum(
+                np.abs(np.subtract(indiv._t_pos_set_a0, indiv._t_pos_estimate_a0)))
+            traj_error_a1 = sum(
+                np.abs(np.subtract(indiv._t_pos_set_a1, indiv._t_pos_estimate_a1)))
+            stat_error_a0 = sum(
+                np.abs(np.subtract(indiv._s_pos_set_a0, indiv._s_pos_estimate_a0)))
+            stat_error_a1 = sum(
+                np.abs(np.subtract(indiv._s_pos_set_a1, indiv._s_pos_estimate_a1)))
+            return (traj_error_a0, traj_error_a1, stat_error_a0, stat_error_a1)
+
+        def static_test(indiv):
+            odrv = indiv._outer.odrv
+            traj = indiv._outer.traj
             pset_0 = traj[0][0]
             pset_1 = traj[0][1]
-            odrv.axis0.controller.input_pos = pset_0
-            odrv.axis1.controller.input_pos = pset_1
-            robo_sleep(self.T_INPUT-self.input_delay)
+            for _ in range(round(indiv._outer.STATIC_TEST_TIME/indiv._outer.T_INPUT)):
+                indiv._s_pos_set_a0.append(pset_0)
+                indiv._s_pos_set_a1.append(pset_1)
+                indiv._s_pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
+                indiv._s_pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
+                indiv._s_Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
+                indiv._s_Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
+                robo_sleep(indiv._outer.T_INPUT-indiv._outer.data_delay*.75)
 
-            start = time.perf_counter()
-            for p in traj:
-                pos_set_a0.append(p[0])
-                pos_set_a1.append(p[1])
-                pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
-                pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
-                Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
-                Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
+        def traj_test(indiv):
+            traj = indiv._outer.traj
+            odrv = indiv._outer.odrv
+            tot_time = indiv._outer.T_INPUT*len(traj)
+            success = False
 
-                odrv.axis0.controller.input_pos = p[0]
-                odrv.axis1.controller.input_pos = p[1]
+            while not success:
+                pset_0 = traj[0][0]
+                pset_1 = traj[0][1]
+                odrv.axis0.controller.input_pos = pset_0
+                odrv.axis1.controller.input_pos = pset_1
+                robo_sleep(indiv._outer.T_INPUT-indiv._outer.input_delay)
 
-                robo_sleep(self.T_INPUT-(self.input_delay+self.data_delay)*.75)
+                start = time.perf_counter()
+                for p in traj:
+                    indiv._t_pos_set_a0.append(p[0])
+                    indiv._t_pos_set_a1.append(p[1])
+                    indiv._t_pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
+                    indiv._t_pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
+                    indiv._t_Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
+                    indiv._t_Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
 
-            end = time.perf_counter()
-            exec_time = end-start
-            if abs(exec_time-tot_time) < tot_time*self.EXEC_TOLERANCE:
-                success = True
-            else:
-                self.TOLERANCE_FAILS += 1
-                if self.TOLERANCE_FAILS >= self.RESET_DELAYS:
+                    odrv.axis0.controller.input_pos = p[0]
+                    odrv.axis1.controller.input_pos = p[1]
+                    robo_sleep(indiv._outer.T_INPUT -
+                               (indiv._outer.input_delay+indiv._outer.data_delay)*.75)
+
+                end = time.perf_counter()
+
+                exec_time = end-start
+                if abs(exec_time-tot_time) < tot_time*indiv._outer.EXEC_TOLERANCE:
+                    success = True
+                else:
                     print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
-                    self.update_time_errors(odrv, self.SAMPLES_ERROR_TEST)
-                    odrv.axis0.controller.input_pos = traj[0][0]
-                    odrv.axis0.controller.input_pos = traj[1][0]
-                    time.sleep(.2)
-                    self.TOLERANCE_FAILS = 0
-        # End While not Succes loop
-        for _ in range(round(self.STATIC_TEST_TIME/self.T_INPUT)):
-            pos_set_a0.append(pset_0)
-            pos_set_a1.append(pset_1)
-            pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
-            pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
-            Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
-            Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
-            robo_sleep(self.T_INPUT-self.data_delay*.75)
+                    indiv._outer.correct_delay_error(pset_0, pset_1)
+            # End While not Succes loop
 
-        return {
-            "pos_set_a0": pos_set_a0,
-            "pos_set_a1": pos_set_a1,
-            "pos_estimate_a0": pos_estimate_a0,
-            "pos_estimate_a1": pos_estimate_a1,
-            "Iq_set_a0": Iq_set_a0,
-            "Iq_set_a1": Iq_set_a1,
-        }
+        def build_data(indiv):
+            indiv.traj_data = {
+                "pos_set_a0": indiv._t_pos_set_a0,
+                "pos_set_a1": indiv._t_pos_set_a1,
+                "pos_estimate_a0": indiv._t_pos_estimate_a0,
+                "pos_estimate_a1": indiv._t_pos_estimate_a1,
+                "Iq_set_a0": indiv._t_Iq_set_a0,
+                "Iq_set_a1": indiv._t_Iq_set_a1,
+            }
+            indiv.stat_data = {
+                "pos_set_a0": indiv._s_pos_set_a0,
+                "pos_set_a1": indiv._s_pos_set_a1,
+                "pos_estimate_a0": indiv._s_pos_estimate_a0,
+                "pos_estimate_a1": indiv._s_pos_estimate_a1,
+                "Iq_set_a0": indiv._s_Iq_set_a0,
+                "Iq_set_a1": indiv._s_Iq_set_a1,
+            }
 
-    def get_exec_errors_data(self):
-        traj = self.traj
-        robo_sleep(.3-self.STATIC_TEST_TIME)
+        def export_dict(indiv):
+            data = dict(indiv.__dict__)
+            for item in indiv.__dict__:
+                if item.startswith('_'):
+                    del data[item]
+            return data
 
-        data = self.test_trajectory()
-        t_data = {}
-        s_data = {}
-        for field in data:
-            t_data[field] = data[field][:len(traj)]
-            s_data[field] = data[field][len(traj):]
-        traj_error_a0 = sum(
-            np.abs(np.subtract(t_data["pos_set_a0"], t_data["pos_estimate_a0"])))
-        traj_error_a1 = sum(
-            np.abs(np.subtract(t_data["pos_set_a1"], t_data["pos_estimate_a1"])))
-        stat_error_a0 = sum(
-            np.abs(np.subtract(s_data["pos_set_a0"], s_data["pos_estimate_a0"])))
-        stat_error_a1 = sum(
-            np.abs(np.subtract(s_data["pos_set_a1"], s_data["pos_estimate_a1"])))
-
-        return (traj_error_a0, traj_error_a1, stat_error_a0, stat_error_a1,
-                t_data, s_data)
+    def correct_delay_error(self, t0, t1):
+        self.TOLERANCE_FAILS += 1
+        if self.TOLERANCE_FAILS >= self.RESET_DELAYS:
+            self.update_time_errors()
+            self.odrv.axis0.controller.input_pos = t0
+            self.odrv.axis1.controller.input_pos = t1
+            time.sleep(.2)
+            self.TOLERANCE_FAILS = 0
 
     def save_ML_data(self, historic_gen_list, winner):
         now = time.localtime()
@@ -167,7 +217,9 @@ class evo_Model:
             json.dump(newData, lean_file)
             lean_file.write('\n')
 
-    def build_ML_training_set(in_file, out_file='out_file.csv', group_size=10):
+    def build_ML_training_set(self, group_size=10):
+        in_file = self.training_tag + '.json'
+        out_file = self.training_tag + '.csv'
         error_cols = [
             'pos_error_'+ax+'_n'+str(g) for ax in ['a0', 'a1']
             for g in range(group_size)]+['Iq_set_'+ax+'_n'+str(g)
@@ -211,31 +263,9 @@ class evo_Model:
 
         master_ML_df.to_csv(data_dir+out_file, index=False)
 
-    def evo_gains_ML(self, traj_array):
+    def evo_gains_ML(self, traj_array,):
         self.traj = traj_array
-        odrv = self.odrv
         k_limits = self.k_limits
-
-        outer = self
-        class Individual:
-            def __init__(self, generation, gains):
-                self.generation = generation
-                self.gains = {
-                    "Kp_pos": gains[0],
-                    "Kp_vel": gains[1],
-                    "Ki_vel": gains[2]
-                }
-                configure.gains(odrv, *gains)
-                te0, te1, se0, se1, t_dat, s_dat = outer.get_exec_errors_data()
-                self.errors = {
-                    "traj_error_a0": te0,
-                    "traj_error_a1": te1,
-                    "stat_error_a0": se0,
-                    "stat_error_a1": se1
-                }
-                self.score = te0+te1+se0+se1
-                self.traj_data = t_dat
-                self.stat_data = s_dat
 
         self.plot_group = []
         self.population = []
@@ -249,13 +279,13 @@ class evo_Model:
             kp = r_uni(self.K_RANGE[0], self.K_RANGE[1])
             kv = r_uni(k_limits[1][0](kp), k_limits[1][1](kp))
             kvi = r_uni(k_limits[2][0], k_limits[2][1](kp, kv))
-            population.append(Individual(0, self.check_gains([kp, kv, kvi])))
+            population.append(self.Individual(0, self.check_gains([kp, kv, kvi]), self.outer))
 
         plot_group.append(population[0])
         population.sort(key=lambda p: p.score)
         win = population[0]
         self.print_results(population)
-        historic = [[p.__dict__ for p in population]]
+        historic = [[p.export_dict() for p in population]]
 
         improvs = 0
         while (generation < self.MAX_GENERATIONS) or self.INF_CYCLE:
@@ -268,15 +298,15 @@ class evo_Model:
             while len(population) < (self.POP_SIZE - self.MUTTS):
                 p1 = parents[n % self.SURVIVORS]
                 p2 = r_choice(parents)
-                population.append(Individual(generation, self.cross_parents(p1, p2)))
+                population.append(self.Individual(generation, self.cross_parents(p1, p2), self.outer))
                 n += 1
             for m in range(self.MUTTS):
                 mutt = population[m]
-                population.append(Individual(generation, self.create_mutt(mutt)))
+                population.append(self.Individual(generation, self.create_mutt(mutt), self.outer))
 
             population.sort(key=lambda p: p.score)
             self.print_results(population)
-            historic.append([p.__dict__ for p in population])
+            historic.append([p.export_dict() for p in population])
 
             if (population[0] != win):
                 win = population[0]
@@ -287,9 +317,11 @@ class evo_Model:
         population.sort(key=lambda p: p.score)
         plot_group.append(population[0])
 
-        # ML.ML_print_group_trajs(plot_group)
-        self.save_ML_data(historic, population[0].__dict__)
-        return population[0].__dict__
+        if self.plot is True:
+            ML.ML_print_group_trajs(plot_group)
+
+        self.save_ML_data(historic, population[0].export_dict())
+        return population[0].export_dict()
 
     def cross_parents(self, p1, p2):
         cross_rate = r_uni(0, (1+self.MUTT_RATE))
@@ -341,9 +373,10 @@ class evo_Model:
         print("Read_info execution time is %0.5fms" % (read_delay*1000))
         return read_delay
 
-    def update_time_errors(self, odrv, samples=50):
+    def update_time_errors(self):
+        samples = self.SAMPLES_ERROR_TEST
         robo_sleep(.1)
         print("Adjusting update time errors")
-        self.input_delay = timetest.get_input_pos_delay(odrv, samples)
-        self.data_delay = self.get_info_read_delay(odrv, samples)
+        self.input_delay = timetest.get_input_pos_delay(self.odrv, samples)
+        self.data_delay = self.get_info_read_delay(self.odrv, samples)
         return (self.input_delay+self.data_delay)*1000
