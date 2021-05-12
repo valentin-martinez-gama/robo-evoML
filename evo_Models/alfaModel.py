@@ -35,9 +35,10 @@ class evo_Model:
     EXEC_TOLERANCE = 10/100
     RESET_DELAYS = 6
     SAMPLES_ERROR_TEST = 50
-    TOLERANCE_FAILS = 0
+    tolerance_fails = 0
     input_delay = .0015
     ML_input_delay = .0035
+    delay_adjust = .6
     # SAMPLING AND TRAJECTORY
     T_INPUT = .02  # SECONDSW
     traj = []
@@ -107,7 +108,10 @@ class evo_Model:
 
             indiv.traj_test()
             indiv.static_test()
+            errs = indiv.calc_error()
+            return errs
 
+        def calc_error(indiv):
             traj_error_a0 = sum(
                 np.abs(np.subtract(indiv._t_pos_set_a0, indiv._t_pos_estimate_a0)))
             traj_error_a1 = sum(
@@ -130,7 +134,8 @@ class evo_Model:
                 indiv._s_pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
                 indiv._s_Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
                 indiv._s_Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
-                robo_sleep(indiv._outer.T_INPUT-indiv._outer.data_delay*.75)
+                robo_sleep(indiv._outer.T_INPUT-indiv._outer.data_delay *
+                           indiv._outer.delay_adjust)
 
         def traj_test(indiv):
             traj = indiv._outer.traj
@@ -157,7 +162,8 @@ class evo_Model:
                     odrv.axis0.controller.input_pos = p[0]
                     odrv.axis1.controller.input_pos = p[1]
                     robo_sleep(indiv._outer.T_INPUT -
-                               (indiv._outer.input_delay+indiv._outer.data_delay)*.75)
+                               (indiv._outer.input_delay+indiv._outer.data_delay) *
+                               indiv._outerdelay_adjust)
 
                 end = time.perf_counter()
 
@@ -195,13 +201,13 @@ class evo_Model:
             return data
 
     def correct_delay_error(self, t0, t1):
-        self.TOLERANCE_FAILS += 1
-        if self.TOLERANCE_FAILS >= self.RESET_DELAYS:
+        self.tolerance_fails += 1
+        if self.tolerance_fails >= self.RESET_DELAYS:
             self.update_time_errors()
             self.odrv.axis0.controller.input_pos = t0
             self.odrv.axis1.controller.input_pos = t1
             time.sleep(.2)
-            self.TOLERANCE_FAILS = 0
+            self.tolerance_fails = 0
 
     def save_ML_data(self, historic_gen_list, winner):
         now = time.localtime()
