@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from importlib import reload
 
+import keras
+
 from Odrive_control import configure, robo
 from Odrive_control.timetest import robo_sleep
 
@@ -35,7 +37,7 @@ Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 '''
 
 
-def traj_training(odrv, model,
+def traj_training(odrv, evo_model,
                   num_evos=5, traj_file='all_trajs.json'):
 
     traj_dir = 'Trajectories/'
@@ -58,15 +60,62 @@ def traj_training(odrv, model,
         print("Moviendose a "+str(s_p0)+'-'+str(s_p1))
         trap_move_to_start(odrv, [s_p0, s_p1])
         robo_sleep(.2)
-        iter_result = model.evo_gains_ML(traj_list[lim_index]['Trajectory'])
+        iter_result = evo_model.evo_gains_ML(traj_list[lim_index]['Trajectory'])
         print("--------------------------------------------------")
         print("Ganador del ejercicio = ")
         print(iter_result['gains'])
         print()
         configure.gains(odrv)
 
-    model.build_ML_training_set()
+    evo_model.build_ML_training_set()
     robo.idle(odrv)
+
+
+def execute_ML_file(odrv, evo_model, ML_file='model', traj_file='all_trajs.json', num_execs=1):
+    ML_model = load_net(ML_file)
+
+    traj_dir = 'Trajectories/'
+    traj_list = []
+    with open(traj_dir+traj_file, 'r') as t_file:
+        for traj in t_file:
+            traj_list.append(json.loads(traj))
+
+    trap_move_to_start(odrv, [.65, .65])
+    robo.start(odrv, time_error=False)
+    # Opcion de randomizar orden de lista de trajectorias
+    shuffle(traj_list)
+    for i in range(num_execs):
+        lim_index = i % len(traj_list)
+        s_p0 = traj_list[lim_index]['Trajectory'][0][0]
+        s_p1 = traj_list[lim_index]['Trajectory'][0][1]
+        print("*************************************************")
+        print("Ejecutando red en timepo real "+str(i+1))
+        print("Trayectoria: " + traj_list[lim_index]['Tag'])
+        print("Moviendose a "+str(s_p0)+'-'+str(s_p1))
+        trap_move_to_start(odrv, [s_p0, s_p1])
+        robo_sleep(.2)
+        evo_model.run_ML_model_traj(ML_model, traj_list[lim_index]['Trajectory'])
+        print("--------------------------------------------------")
+        print()
+        if evo_model.plot is True:
+            evo_model.ML_model_exec_plot()
+        configure.gains(odrv)
+
+    robo.idle(odrv)
+
+def load_net(ML_file):
+    # load json and create model
+    json_file = open('ML_Models/'+ML_file+'.json', 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
+    ML_model = keras.models.model_from_json(loaded_model_json)
+    # load weights into new model
+    ML_model.load_weights('ML_Models/'+ML_file+".h5")
+    print("Loaded model from disk")
+
+    ML_model.compile(loss='mean_squared_error', optimizer='adam')
+
+    return ML_model
 
 
 def trap_move_to_start(odrv, p_list):
@@ -130,7 +179,7 @@ def ML_trajectory(pos1=0, pos2=pi, t=.5):
     return ML_traj
 
 
-def ML_print_group_trajs(chosen):
+def ML_print_indiv_group_trajs(chosen):
     time_axis = []
     accumulated_time = 0
     estimatess = []

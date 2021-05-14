@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from random import uniform as r_uni
 from random import choice as r_choice
+import matplotlib.pyplot as plt
 
 from Odrive_control import configure
 from Odrive_control.timetest import robo_sleep
@@ -79,7 +80,7 @@ class evo_Model:
                 "Ki_vel": gains[2]
             }
             configure.gains(outer.odrv, *gains)
-            te0, te1, se0, se1 = indiv.get_exec_errors_data()
+            te0, te1, se0, se1 = indiv.get_training_errors_data()
             indiv.errors = {
                 "traj_error_a0": te0,
                 "traj_error_a1": te1,
@@ -89,7 +90,7 @@ class evo_Model:
             indiv.score = te0+te1+se0+se1
             indiv.build_data()
 
-        def get_exec_errors_data(indiv):
+        def get_training_errors_data(indiv):
             robo_sleep(.3-indiv._outer.STATIC_TEST_TIME)
 
             indiv._t_pos_set_a0 = []
@@ -151,16 +152,16 @@ class evo_Model:
                 robo_sleep(indiv._outer.T_INPUT-indiv._outer.input_delay)
 
                 start = time.perf_counter()
-                for p in traj:
-                    indiv._t_pos_set_a0.append(p[0])
-                    indiv._t_pos_set_a1.append(p[1])
+                for p in range(1,len(traj)):
+                    indiv._t_pos_set_a0.append(traj[p-1][0])
+                    indiv._t_pos_set_a1.append(traj[p-1][1])
                     indiv._t_pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
                     indiv._t_pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
                     indiv._t_Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
                     indiv._t_Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
 
-                    odrv.axis0.controller.input_pos = p[0]
-                    odrv.axis1.controller.input_pos = p[1]
+                    odrv.axis0.controller.input_pos = traj[p][0]
+                    odrv.axis1.controller.input_pos = traj[p][1]
                     robo_sleep(indiv._outer.T_INPUT -
                                (indiv._outer.input_delay+indiv._outer.data_delay) *
                                indiv._outerdelay_adjust)
@@ -323,7 +324,7 @@ class evo_Model:
         plot_group.append(population[0])
 
         if self.plot is True:
-            ML.ML_print_group_trajs(plot_group)
+            ML.ML_print_indiv_group_trajs(plot_group)
 
         self.save_ML_data(historic, population[0].export_dict())
         return population[0].export_dict()
@@ -384,4 +385,77 @@ class evo_Model:
         print("Adjusting update time errors")
         self.input_delay = timetest.get_input_pos_delay(self.odrv, samples)
         self.data_delay = self.get_info_read_delay(self.odrv, samples)
+        # self.configure_delay = timetest.get_configure_delay(self.odrv, samples)
         return (self.input_delay+self.data_delay)*1000
+
+    def run_ML_model_traj(self, ML_model, traj):
+        tot_time = self.T_INPUT*len(traj)
+        odrv = self.odrv
+        success = False
+
+        while not success:
+            self._ML_pos_set_a0 = []
+            self._ML_pos_set_a1 = []
+            self._ML_pos_estimate_a0 = []
+            self._ML_pos_estimate_a1 = []
+            self._ML_Iq_set_a0 = []
+            self._ML_Iq_set_a1 = []
+            self._ML_pos_error_a0 = []
+            self._ML_pos_error_a1 = []
+
+            ref_counter = 0
+            lp0 = traj[0][0]
+            lp1 = traj[0][1]
+            odrv.axis0.controller.input_pos = lp0
+            odrv.axis1.controller.input_pos = lp1
+            robo_sleep(self.T_INPUT-self.input_delay)
+
+            start = time.perf_counter()
+            for p in traj:
+                self._ML_pos_set_a0.append(lp0)
+                self._ML_pos_set_a1.append(lp1)
+                self._ML_pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
+                self._ML_pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
+                self._ML_Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
+                self._ML_Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
+                self._ML_pos_error_a0.append(self._ML_pos_set_a0[-1]-self._ML_pos_estimate_a0[-1])
+                self._ML_pos_error_a1.append(self._ML_pos_set_a1[-1]-self._ML_pos_estimate_a1[-1])
+                ref_counter += 1
+
+                if ref_counter % 30 == 0:
+                    delay_start = time.perf_counter()
+                    self.X_val = np.matrix([self._ML_pos_error_a0[-10:]
+                             + self._ML_pos_error_a1[-10:]
+                             + self._ML_Iq_set_a0[-10:]
+                             + self._ML_Iq_set_a1[-10:]])
+
+                    self.results = ML_model.predict(self.X_val)
+                    configure.gains(odrv, self.results[0][0], self.results[0][1]/10, self.results[0][2]/10)
+                    delay_end = time.perf_counter()
+                    robo_sleep(self.T_INPUT
+                               - (self.input_delay+self.data_delay) * self.delay_adjust
+                               - (delay_end-delay_start))
+                else:
+                    robo_sleep(self.T_INPUT
+                               - (self.input_delay+self.data_delay) * self.delay_adjust)
+
+                odrv.axis0.controller.input_pos = lp0 = p[0]
+                odrv.axis1.controller.input_pos = lp1 = p[1]
+                end = time.perf_counter()
+
+            exec_time = end-start
+            if abs(exec_time-tot_time) < tot_time*self.EXEC_TOLERANCE:
+                success = True
+            else:
+                print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
+                self.correct_delay_error(lp0, lp1)
+
+    def ML_model_exec_plot(self):
+        time_axis = range(0, len(self._ML_pos_set_a0)*2)
+        plt.plot(time_axis, self._ML_pos_estimate_a0+self._ML_pos_estimate_a1)
+        plt.plot(time_axis, self._ML_pos_set_a0+self._ML_pos_set_a1)
+        plt.plot(time_axis, np.multiply(15, np.array(self._ML_pos_error_a0+self._ML_pos_error_a1))
+        plt.xlabel("Muestreo")
+        plt.ylabel("Posición")
+        plt.legend(["Posición Actual", "Referencia", "Error"])
+        plt.show()

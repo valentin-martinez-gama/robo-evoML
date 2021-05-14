@@ -40,7 +40,7 @@ class beta_Model(evo_Model):
     K_RANGE = (40, 90)
     k_limits = ((K_RANGE[0], K_RANGE[1]),
                 (lambda kp: .052+.00020*kp, lambda kp: .48*1.2-.005*kp),
-                (0, lambda kp, kv: 1.25-.0075*kp + kv*5))
+                (0, lambda kp, kv: 1.25-.0075*kp + kv*6))
 
     class beta_Individual(evo_Model.Individual):
 
@@ -52,10 +52,10 @@ class beta_Model(evo_Model):
             success = False
 
             while not success:
-                pset_0 = lp0 = traj[0][0]
-                pset_1 = lp1 = traj[0][1]
-                odrv.axis0.controller.input_pos = pset_0
-                odrv.axis1.controller.input_pos = pset_1
+                lp0 = traj[0][0]
+                lp1 = traj[0][1]
+                odrv.axis0.controller.input_pos = lp0
+                odrv.axis1.controller.input_pos = lp1
                 robo_sleep(indiv._outer.T_INPUT-indiv._outer.input_delay)
 
                 start = time.perf_counter()
