@@ -1,7 +1,6 @@
 from evo_Models.alfaModel import evo_Model
 import time
 from Odrive_control.timetest import robo_sleep
-import numpy as np
 
 
 class beta_Model(evo_Model):
@@ -84,18 +83,7 @@ class beta_Model(evo_Model):
                     success = True
                 else:
                     print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
-                    indiv._outer.correct_delay_error(pset_0, pset_1)
-
-        def calc_error(indiv):
-            traj_error_a0 = sum(
-                np.abs(np.subtract(indiv._t_pos_set_a0, indiv._t_pos_estimate_a0)))
-            traj_error_a1 = sum(
-                np.abs(np.subtract(indiv._t_pos_set_a1, indiv._t_pos_estimate_a1)))
-            stat_error_a0 = sum(
-                np.abs(np.subtract(indiv._s_pos_set_a0, indiv._s_pos_estimate_a0)))
-            stat_error_a1 = sum(
-                np.abs(np.subtract(indiv._s_pos_set_a1, indiv._s_pos_estimate_a1)))
-            return (traj_error_a0, traj_error_a1, stat_error_a0, stat_error_a1)
+                    indiv._outer.correct_delay_error(lp0, lp1)
 
     def I_am(self):
         print("I am Beta")
