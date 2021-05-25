@@ -343,7 +343,7 @@ class evo_Model:
     def print_results(self, pop):
         for i in pop:
             print(i.generation, round(i.score, 4), [round(i.gains[g], 3)
-                  for g in i.gains], sep="   ")
+                  for g in i.gains], sep="  ")
             print('  ', round(i.errors["traj_error_a0"]+i.errors["traj_error_a1"], 5),
                   round(i.errors["stat_error_a0"]+i.errors["stat_error_a1"], 5),
                   sep=" + ")
