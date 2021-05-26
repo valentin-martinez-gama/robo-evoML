@@ -40,6 +40,17 @@ class gamma_Model(beta_Model):
             indiv.score = te0+te1+se0+se1
             indiv.build_data()
 
+    def do_model_predict(self):
+        self.X_val = np.matrix([self._ML_pos_error_a0[-10:]
+                                + self._ML_pos_error_a1[-10:]
+                                + self._ML_Iq_set_a0[-10:]
+                                + self._ML_Iq_set_a1[-10:]])
+
+        self.results = ML_model.predict(self.X_val)
+        predicted_A0_gains = [self.results[0][0], self.results[0][1]/10, self.results[0][2]/10]
+        predicted_A1_gains = [self.results[0][3], self.results[0][4]/10, self.results[0][5]/10]
+        configure.independent_gains(odrv, predicted_A0_gains, predicted_A1_gains)
+
     def evo_gains_ML(self, traj_array,):
         self.traj = traj_array
         k_limits = self.k_limits
@@ -207,3 +218,4 @@ class gamma_Model(beta_Model):
         self.ELITES = 2
         self.SURVIVORS = 6
         self.MUTTS = 4
+        self.plot = True

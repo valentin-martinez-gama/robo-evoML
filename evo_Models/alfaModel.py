@@ -254,7 +254,7 @@ class evo_Model:
                         calc_df['Iq_set_a1'] = base_df['Iq_set_a1']
 
                         train_set = []
-                        for s in range(len(calc_df)-(group_size-1)):
+                        for s in range(0, len(calc_df)-(group_size-1), 3):
                             train_set.append(calc_df[s:s+group_size].values.ravel('F'))
 
                         ind_df = pd.DataFrame(train_set, columns=error_cols)
@@ -333,7 +333,7 @@ class evo_Model:
 
     def print_group(self, plot_group):
         ML.ML_print_indiv_group_trajs(plot_group)
-        
+
     def cross_parents(self, p1, p2):
         cross_rate = r_uni(0, (1+self.MUTT_RATE))
         ch_gains = np.add([p1.gains[g1]*cross_rate for g1 in p1.gains],
@@ -429,14 +429,9 @@ class evo_Model:
 
                 if ref_counter % 30 == 0:
                     delay_start = time.perf_counter()
-                    self.X_val = np.matrix([self._ML_pos_error_a0[-10:]
-                                            + self._ML_pos_error_a1[-10:]
-                                            + self._ML_Iq_set_a0[-10:]
-                                            + self._ML_Iq_set_a1[-10:]])
 
-                    self.results = ML_model.predict(self.X_val)
-                    configure.gains(odrv, self.results[0][0],
-                                    self.results[0][1]/10, self.results[0][2]/10)
+                    self.do_model_predict()
+
                     delay_end = time.perf_counter()
                     robo_sleep(self.T_INPUT
                                - (self.input_delay+self.data_delay) * self.delay_adjust
@@ -455,6 +450,16 @@ class evo_Model:
             else:
                 print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
                 self.correct_delay_error(lp0, lp1)
+
+    def do_model_predict(self):
+        self.X_val = np.matrix([self._ML_pos_error_a0[-10:]
+                                + self._ML_pos_error_a1[-10:]
+                                + self._ML_Iq_set_a0[-10:]
+                                + self._ML_Iq_set_a1[-10:]])
+
+        self.results = ML_model.predict(self.X_val)
+        configure.gains(odrv, self.results[0][0],
+                        self.results[0][1]/10, self.results[0][2]/10)
 
     def ML_model_exec_plot(self):
         time_axis = range(0, len(self._ML_pos_set_a0)*2)
