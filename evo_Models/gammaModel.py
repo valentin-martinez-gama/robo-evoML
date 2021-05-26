@@ -1,7 +1,7 @@
 from evo_Models.betaModel import beta_Model
+import matplotlib.pyplot as plt
 from random import uniform as r_uni
 from random import choice as r_choice
-from random import randrange
 import numpy as np
 import pandas as pd
 import json
@@ -13,7 +13,7 @@ import ML
 class gamma_Model(beta_Model):
 
     def __init__(self, odrv, training_tag):
-        beta_Model.__init__(odrv, training_tag)
+        beta_Model.__init__(self, odrv, training_tag)
         self.Individual = self.gamma_Individual
 
     class gamma_Individual(beta_Model.beta_Individual):
@@ -76,14 +76,14 @@ class gamma_Model(beta_Model):
             del population[self.ELITES:]
 
             n = 0
-            while len(population) < self.POP_SIZE:
+            while len(population) < (self.POP_SIZE - self.MUTTS):
                 p1 = parents[n % self.SURVIVORS]
                 p2 = r_choice(parents)
                 population.append(self.Individual(generation, *self.cross_parents(p1, p2), self.outer))
                 n += 1
             for _ in range(self.MUTTS):
-                mutt_pos = randrange(self.ELITES, self.POP_SIZE)
-                population[mutt_pos] = self.Individual(generation, *self.create_mutt(population[mutt_pos]), self.outer)
+                mutt = r_choice(population)
+                population.append(self.Individual(generation, *self.create_mutt(mutt), self.outer))
 
             population.sort(key=lambda p: p.score)
             self.print_results(population)
@@ -99,7 +99,7 @@ class gamma_Model(beta_Model):
         plot_group.append(population[0])
 
         if self.plot is True:
-            ML.ML_print_indiv_group_trajs(plot_group)
+            self.print_group(plot_group)
 
         self.save_ML_data(historic, population[0].export_dict())
         return population[0].export_dict()
@@ -111,17 +111,25 @@ class gamma_Model(beta_Model):
         return (self.check_gains(ch_gains[:3]), self.check_gains(ch_gains[3:]))
 
     def create_mutt(self, origin):
-        mutt_gains = [origin.gains[g]*(1+r_uni(-self.MUTT_RATE, self.MUTT_RATE))
-                      for g in origin.gains]
-        return (self.check_gains(mutt_gains[:3]), self.check_gains(mutt_gains[3:]))
+        mutt_gains_A0 = []
+        mutt_gains_A1 = []
+        mutt_rate_A0 = 1+r_uni(-self.MUTT_RATE, self.MUTT_RATE)
+        mutt_rate_A1 = 1+r_uni(-self.MUTT_RATE, self.MUTT_RATE)
+        for g in origin.gains:
+            if g.startswith('A0'):
+                mutt_gains_A0.append(origin.gains[g]*mutt_rate_A0)
+            else:
+                mutt_gains_A1.append(origin.gains[g]*mutt_rate_A1)
+        return (self.check_gains(mutt_gains_A0), self.check_gains(mutt_gains_A1))
 
     def build_ML_training_set(self, group_size=10):
         in_file = self.training_tag + '.json'
         out_file = self.training_tag + '.csv'
         error_cols = [
             'pos_error_'+ax+'_n'+str(g) for ax in ['a0', 'a1']
-            for g in range(group_size)]+['Iq_set_'+ax+'_n'+str(g)
-            for ax in ['a0', 'a1'] for g in range(group_size)]
+            for g in range(group_size)] + [
+            'Iq_set_'+ax+'_n'+str(g) for ax in ['a0', 'a1']
+            for g in range(group_size)]
 
         k_in_cols = ['in_A0_Kp_pos', 'in_A0_Kp_vel', 'in_A0_Ki_vel',
                      'in_A1_Kp_pos', 'in_A1_Kp_vel', 'in_A1_Ki_vel']
@@ -161,5 +169,41 @@ class gamma_Model(beta_Model):
 
         master_ML_df.to_csv(data_dir+out_file, index=False)
 
+    def print_indiv_group_trajs(self, chosen):
+        time_axis = []
+        accumulated_time = 0
+        estimatess = []
+        inputss = []
+        errorss = []
+        for indiv in chosen:
+            time_axis.extend([t+accumulated_time for t in range(0,
+                             (len(indiv.traj_data['pos_estimate_a1']+indiv.stat_data['pos_estimate_a1'])*2))])
+            accumulated_time = time_axis[-1]
+
+            e0 = indiv.traj_data['pos_estimate_a0']+indiv.stat_data['pos_estimate_a0']
+            e1 = indiv.traj_data['pos_estimate_a1']+indiv.stat_data['pos_estimate_a1']
+            estimatess.extend(e0 + e1)
+            i0 = indiv.traj_data['pos_set_a0']+indiv.stat_data['pos_set_a0']
+            i1 = indiv.traj_data['pos_set_a1']+indiv.stat_data['pos_set_a1']
+            inputss.extend(i0 + i1)
+            errorss.extend(list(np.multiply(15, np.abs(np.subtract(np.array(i0+i1), np.array(e0+e1))))))
+        plt.plot(time_axis, estimatess)
+        plt.plot(time_axis, inputss)
+        plt.plot(time_axis, errorss)
+        plt.xlabel("Muestreo")
+        plt.ylabel("Posición")
+        plt.legend(["Posición Actual", "Referencia", "Error"])
+        plt.show()
+
+    def print_group(self, plot_group):
+        self.print_indiv_group_trajs(plot_group)
+
     def I_am(self):
         print("I am Gamma")
+
+    def set_test_params(self):
+        self.MAX_GENERATIONS = 5
+        self.POP_SIZE = 10
+        self.ELITES = 2
+        self.SURVIVORS = 6
+        self.MUTTS = 4

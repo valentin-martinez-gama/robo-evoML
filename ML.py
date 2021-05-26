@@ -4,7 +4,6 @@ from random import shuffle
 from math import pi
 import numpy as np
 import matplotlib.pyplot as plt
-from importlib import reload
 
 import keras
 
@@ -102,6 +101,7 @@ def execute_ML_file(odrv, evo_model, ML_file='model', traj_file='all_trajs.json'
         configure.gains(odrv)
 
     robo.idle(odrv)
+
 
 def load_net(ML_file):
     # load json and create model
