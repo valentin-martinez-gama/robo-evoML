@@ -20,6 +20,7 @@ def create_alfa_Model(odrv, training_tag):
 
 class evo_Model:
     '''Basic object representation of evo Model - allows to tune models '''
+
     def __init__(self, odrv, training_tag):
         self.odrv = odrv
         self.training_tag = training_tag
@@ -152,7 +153,7 @@ class evo_Model:
                 robo_sleep(indiv._outer.T_INPUT-indiv._outer.input_delay)
 
                 start = time.perf_counter()
-                for p in range(1,len(traj)):
+                for p in range(1, len(traj)):
                     indiv._t_pos_set_a0.append(traj[p-1][0])
                     indiv._t_pos_set_a1.append(traj[p-1][1])
                     indiv._t_pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
@@ -229,7 +230,7 @@ class evo_Model:
         error_cols = [
             'pos_error_'+ax+'_n'+str(g) for ax in ['a0', 'a1']
             for g in range(group_size)]+['Iq_set_'+ax+'_n'+str(g)
-            for ax in ['a0', 'a1'] for g in range(group_size)]
+                                         for ax in ['a0', 'a1'] for g in range(group_size)]
 
         k_in_cols = ['in_Kp_pos', 'in_Kp_vel', 'in_Ki_vel']
         k_out_cols = ['out_Kp_pos', 'out_Kp_vel', 'out_Ki_vel']
@@ -304,7 +305,8 @@ class evo_Model:
             while len(population) < (self.POP_SIZE - self.MUTTS):
                 p1 = parents[n % self.SURVIVORS]
                 p2 = r_choice(parents)
-                population.append(self.Individual(generation, self.cross_parents(p1, p2), self.outer))
+                population.append(self.Individual(
+                    generation, self.cross_parents(p1, p2), self.outer))
                 n += 1
             for m in range(self.MUTTS):
                 mutt = population[m]
@@ -324,11 +326,14 @@ class evo_Model:
         plot_group.append(population[0])
 
         if self.plot is True:
-            ML.ML_print_indiv_group_trajs(plot_group)
+            self.print_group(plot_group)
 
         self.save_ML_data(historic, population[0].export_dict())
         return population[0].export_dict()
 
+    def print_group(self, plot_group):
+        ML.ML_print_indiv_group_trajs(plot_group)
+        
     def cross_parents(self, p1, p2):
         cross_rate = r_uni(0, (1+self.MUTT_RATE))
         ch_gains = np.add([p1.gains[g1]*cross_rate for g1 in p1.gains],
@@ -425,12 +430,13 @@ class evo_Model:
                 if ref_counter % 30 == 0:
                     delay_start = time.perf_counter()
                     self.X_val = np.matrix([self._ML_pos_error_a0[-10:]
-                             + self._ML_pos_error_a1[-10:]
-                             + self._ML_Iq_set_a0[-10:]
-                             + self._ML_Iq_set_a1[-10:]])
+                                            + self._ML_pos_error_a1[-10:]
+                                            + self._ML_Iq_set_a0[-10:]
+                                            + self._ML_Iq_set_a1[-10:]])
 
                     self.results = ML_model.predict(self.X_val)
-                    configure.gains(odrv, self.results[0][0], self.results[0][1]/10, self.results[0][2]/10)
+                    configure.gains(odrv, self.results[0][0],
+                                    self.results[0][1]/10, self.results[0][2]/10)
                     delay_end = time.perf_counter()
                     robo_sleep(self.T_INPUT
                                - (self.input_delay+self.data_delay) * self.delay_adjust
@@ -454,7 +460,7 @@ class evo_Model:
         time_axis = range(0, len(self._ML_pos_set_a0)*2)
         plt.plot(time_axis, self._ML_pos_estimate_a0+self._ML_pos_estimate_a1)
         plt.plot(time_axis, self._ML_pos_set_a0+self._ML_pos_set_a1)
-        plt.plot(time_axis, np.multiply(15, np.abs(self._ML_pos_error_a0+self._ML_pos_error_a1))
+        plt.plot(time_axis, np.multiply(15, np.abs(self._ML_pos_error_a0+self._ML_pos_error_a1)))
         plt.xlabel("Muestreo")
         plt.ylabel("Posición")
         plt.legend(["Posición Actual", "Referencia", "Error (Abs)"])
