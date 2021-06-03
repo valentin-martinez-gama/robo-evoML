@@ -15,6 +15,7 @@ class gamma_Model(beta_Model):
     def __init__(self, odrv, training_tag):
         beta_Model.__init__(self, odrv, training_tag)
         self.Individual = self.gamma_Individual
+        self.plot = True
 
     class gamma_Individual(beta_Model.beta_Individual):
 
@@ -29,6 +30,8 @@ class gamma_Model(beta_Model):
                 "A1_Kp_vel": A1_gains[1],
                 "A1_Ki_vel": A1_gains[2]
             }
+            indiv._A0_gains = A0_gains
+            indiv._A1_gains = A1_gains
             configure.independent_gains(outer.odrv, A0_gains, A1_gains)
             te0, te1, se0, se1 = indiv.get_training_errors_data()
             indiv.errors = {
@@ -46,10 +49,10 @@ class gamma_Model(beta_Model):
                                 + self._ML_Iq_set_a0[-10:]
                                 + self._ML_Iq_set_a1[-10:]])
 
-        self.results = ML_model.predict(self.X_val)
+        self.results = self.ML_model.predict(self.X_val)
         predicted_A0_gains = [self.results[0][0], self.results[0][1]/10, self.results[0][2]/10]
         predicted_A1_gains = [self.results[0][3], self.results[0][4]/10, self.results[0][5]/10]
-        configure.independent_gains(odrv, predicted_A0_gains, predicted_A1_gains)
+        configure.independent_gains(self.odrv, predicted_A0_gains, predicted_A1_gains)
 
     def evo_gains_ML(self, traj_array,):
         self.traj = traj_array
@@ -84,6 +87,9 @@ class gamma_Model(beta_Model):
             generation += 1
             print('\n'+"*** Creating "+str(generation) + " generation ***")
             parents = population[:self.SURVIVORS]
+
+            for p, elite in enumerate(population[:self.ELITES]):
+                population[p] = self.Individual(elite.generation, elite._A0_gains, elite._A1_gains, self.outer)
             del population[self.ELITES:]
 
             n = 0

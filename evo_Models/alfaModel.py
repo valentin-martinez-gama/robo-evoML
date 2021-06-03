@@ -40,7 +40,7 @@ class evo_Model:
     tolerance_fails = 0
     input_delay = .0015
     ML_input_delay = .0035
-    delay_adjust = .6
+    delay_adjust = .75
     # SAMPLING AND TRAJECTORY
     T_INPUT = .02  # SECONDSW
     traj = []
@@ -394,6 +394,7 @@ class evo_Model:
         return (self.input_delay+self.data_delay)*1000
 
     def run_ML_model_traj(self, ML_model, traj):
+        self.ML_model = ML_model
         tot_time = self.T_INPUT*len(traj)
         odrv = self.odrv
         success = False
@@ -427,7 +428,7 @@ class evo_Model:
                 self._ML_pos_error_a1.append(self._ML_pos_set_a1[-1]-self._ML_pos_estimate_a1[-1])
                 ref_counter += 1
 
-                if ref_counter % 30 == 0:
+                if ref_counter % 20 == 0:
                     delay_start = time.perf_counter()
 
                     self.do_model_predict()
@@ -435,7 +436,7 @@ class evo_Model:
                     delay_end = time.perf_counter()
                     robo_sleep(self.T_INPUT
                                - (self.input_delay+self.data_delay) * self.delay_adjust
-                               - (delay_end-delay_start))
+                               - (delay_end-delay_start)*1.20)
                 else:
                     robo_sleep(self.T_INPUT
                                - (self.input_delay+self.data_delay) * self.delay_adjust)

@@ -4,6 +4,7 @@ from random import shuffle
 from math import pi
 import numpy as np
 import matplotlib.pyplot as plt
+from importlib import reload
 
 import keras
 
