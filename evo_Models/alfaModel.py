@@ -34,6 +34,7 @@ class evo_Model:
         self.am = 'AlphaAF'
     plot = False
     # EXECUTION TIME TOLERANCES
+    update_interval = 10
     EXEC_TOLERANCE = 10/100
     RESET_DELAYS = 6
     SAMPLES_ERROR_TEST = 50
@@ -41,6 +42,7 @@ class evo_Model:
     input_delay = .0015
     ML_input_delay = .0035
     delay_adjust = .75
+    ML_adjust = 1.05
     # SAMPLING AND TRAJECTORY
     T_INPUT = .02  # SECONDSW
     traj = []
@@ -416,7 +418,7 @@ class evo_Model:
             odrv.axis1.controller.input_pos = lp1
             robo_sleep(self.T_INPUT-self.input_delay)
 
-            start = time.perf_counter()
+            start = delay_start = time.perf_counter()
             for p in traj:
                 self._ML_pos_set_a0.append(lp0)
                 self._ML_pos_set_a1.append(lp1)
@@ -428,18 +430,26 @@ class evo_Model:
                 self._ML_pos_error_a1.append(self._ML_pos_set_a1[-1]-self._ML_pos_estimate_a1[-1])
                 ref_counter += 1
 
-                if ref_counter % 20 == 0:
-                    delay_start = time.perf_counter()
+                if ref_counter % self.update_interval == 0:
+                    #delay_start = time.perf_counter()
 
                     self.do_model_predict()
 
                     delay_end = time.perf_counter()
+                    robo_sleep(self.T_INPUT - (delay_end-delay_start)*self.ML_adjust)
+                    '''
                     robo_sleep(self.T_INPUT
                                - (self.input_delay+self.data_delay) * self.delay_adjust
-                               - (delay_end-delay_start)*1.20)
+                               - (delay_end-delay_start)*1.25) '''
                 else:
+                    delay_end = time.perf_counter()
+                    robo_sleep(self.T_INPUT - (delay_end-delay_start)*self.ML_adjust)
+                    '''
                     robo_sleep(self.T_INPUT
                                - (self.input_delay+self.data_delay) * self.delay_adjust)
+                               '''
+
+                delay_start = time.perf_counter() ######
 
                 odrv.axis0.controller.input_pos = lp0 = p[0]
                 odrv.axis1.controller.input_pos = lp1 = p[1]

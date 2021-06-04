@@ -50,8 +50,8 @@ class gamma_Model(beta_Model):
                                 + self._ML_Iq_set_a1[-10:]])
 
         self.results = self.ML_model.predict(self.X_val)
-        predicted_A0_gains = [self.results[0][0], self.results[0][1]/10, self.results[0][2]/10]
-        predicted_A1_gains = [self.results[0][3], self.results[0][4]/10, self.results[0][5]/10]
+        predicted_A0_gains = [self.results[0][0], self.results[0][1]/100, self.results[0][2]/10]
+        predicted_A1_gains = [self.results[0][3], self.results[0][4]/100, self.results[0][5]/10]
         configure.independent_gains(self.odrv, predicted_A0_gains, predicted_A1_gains)
 
     def evo_gains_ML(self, traj_array,):
