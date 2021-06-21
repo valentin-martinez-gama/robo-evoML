@@ -93,6 +93,28 @@ class evo_Model:
             indiv.score = te0+te1+se0+se1
             indiv.build_data()
 
+        def get_ML_errors_data(indiv, ML_model):
+            robo_sleep(.3-indiv._outer.STATIC_TEST_TIME)
+
+            indiv.outer.run_ML_model_traj(ML_model, indiv._outer.traj)
+            indiv._t_pos_set_a0 = indiv._outer._ML_pos_set_a0
+            indiv._t_pos_set_a1 = indiv._outer._ML_pos_set_a1
+            indiv._t_pos_estimate_a0 = indiv._outer._ML_pos_estimate_a0
+            indiv._t_pos_estimate_a1 = indiv._outer._ML_pos_estimate_a1
+            indiv._t_Iq_set_a0 = indiv._outer._ML_Iq_set_a0
+            indiv._t_Iq_set_a1 = indiv._outer._ML_Iq_set_a1
+
+            indiv._s_pos_set_a0 = []
+            indiv._s_pos_set_a1 = []
+            indiv._s_pos_estimate_a0 = []
+            indiv._s_pos_estimate_a1 = []
+            indiv._s_Iq_set_a0 = []
+            indiv._s_Iq_set_a1 = []
+            indiv.static_test()
+
+            errs = indiv.calc_error()
+            return errs
+
         def get_training_errors_data(indiv):
             robo_sleep(.3-indiv._outer.STATIC_TEST_TIME)
 
@@ -148,6 +170,13 @@ class evo_Model:
             success = False
 
             while not success:
+                indiv._t_pos_set_a0 = []
+                indiv._t_pos_set_a1 = []
+                indiv._t_pos_estimate_a0 = []
+                indiv._t_pos_estimate_a1 = []
+                indiv._t_Iq_set_a0 = []
+                indiv._t_Iq_set_a1 = []
+
                 pset_0 = traj[0][0]
                 pset_1 = traj[0][1]
                 odrv.axis0.controller.input_pos = pset_0
@@ -219,7 +248,7 @@ class evo_Model:
             "runID": int(str(now.tm_year) + str(now.tm_mon) + str(now.tm_mday)
                          + str(now.tm_hour) + str(now.tm_min)),
             "winner": winner,
-            "traj": self.traj,
+            "traj": self.traj_name,
             "runs_data": historic_gen_list
         }
         with open('Datasets/' + self.training_tag+'.json', 'a') as lean_file:
@@ -272,7 +301,8 @@ class evo_Model:
 
         master_ML_df.to_csv(data_dir+out_file, index=False)
 
-    def evo_gains_ML(self, traj_array,):
+    def evo_gains_ML(self, traj_array, traj_name):
+        self.traj_name = traj_name
         self.traj = traj_array
         k_limits = self.k_limits
 

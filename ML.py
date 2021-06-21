@@ -4,12 +4,13 @@ from random import shuffle
 from math import pi
 import numpy as np
 import matplotlib.pyplot as plt
+from random import uniform as r_uni
 from importlib import reload
-
 import keras
 
 from Odrive_control import configure, robo
 from Odrive_control.timetest import robo_sleep
+from evo_Models.gammaModel import gamma_Model as evo_default
 
 from odrive.enums import *
 '''
@@ -35,6 +36,68 @@ Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
     Cuanta importancia para el estatico vs Trayectoria?
 
 '''
+
+
+def generate_results(odrv, evo_gains, traj_file, results_tag='results'):
+    trap_move_to_start(odrv, [.65, .65])
+    robo.start(odrv, time_error=False)
+
+    traj_dir = 'Trajectories/'
+    traj_list = []
+    with open(traj_dir+traj_file, 'r') as t_file:
+        for traj in t_file:
+            traj_list.append(json.loads(traj))
+
+    obj = evo_default(odrv, results_tag+'_RAND')
+
+    for t in traj_list:
+        s_p0 = t['Trajectory'][0][0]
+        s_p1 = t['Trajectory'][0][1]
+        print("Obteniendo resultados para Trayectoria: "+t['Tag'])
+        trap_move_to_start(odrv, [s_p0, s_p1])
+        robo_sleep(.2)
+
+        obj.traj = traj_list[0]
+
+        print("RANDOM INDIV *********")
+        axis = [0, 1]
+        kp = [r_uni(self.K_RANGE[0], self.K_RANGE[1]) for m in axis]
+        kv = [r_uni(k_limits[1][0](kp[m]), k_limits[1][1](kp[m])) for m in axis]
+        kvi = [r_uni(k_limits[2][0], k_limits[2][1](kp[m], kv[m])) for m in axis]
+        rand_indiv = [obj.Individual(111,
+                                     obj.check_gains([kp[0], kv[0], kvi[0]]),
+                                     obj.check_gains([kp[1], kv[1], kvi[1]]),
+                                     obj.outer)]
+        obj.print_results(rand_indiv)
+
+        print("EVO GAINS INDIV ***********")
+        evo_indiv = [obj.Individual(222,
+                                    obj.check_gains(evo_gains[0]),
+                                    obj.check_gains(evo_gains[1]),
+                                    obj.outer)]
+        obj.print_results(evo_indiv)
+
+        print("ML GAINS INDIV **********")
+        original_function = obj.Individual.get_training_errors_data
+        obj.Individual.get_training_errors_data = obj.Individual.get_ML_errors_data
+        ML_indiv = [obj.Individual(333,
+                                   obj.check_gains(evo_gains[0]),
+                                   obj.check_gains(evo_gains[1]),
+                                   obj.outer)]
+        obj.print_results(evo_indiv)
+        obj.Individual.get_training_errors_data = original_function
+
+        combined_results = [rand_indiv, evo_indiv, ML_indiv]
+
+        max_score = 99999
+        for r in combined_results:
+            if r.score < max_score:
+                winner = r
+
+        obj.print_group(combined_results)
+        obj.save_ML_data([c.export_dict for c in combined_results], winner.export_dict())
+
+    return combined_results
 
 
 def traj_training(odrv, evo_model,

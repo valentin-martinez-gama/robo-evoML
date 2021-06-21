@@ -54,7 +54,8 @@ class gamma_Model(beta_Model):
         predicted_A1_gains = [self.results[0][3], self.results[0][4]/100, self.results[0][5]/10]
         configure.independent_gains(self.odrv, predicted_A0_gains, predicted_A1_gains)
 
-    def evo_gains_ML(self, traj_array,):
+    def evo_gains_ML(self, traj_array, traj_name):
+        self.traj_name = traj_name
         self.traj = traj_array
         k_limits = self.k_limits
 
