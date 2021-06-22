@@ -50,6 +50,13 @@ class beta_Model(evo_Model):
             tot_time = indiv._outer.T_INPUT*len(traj)
             success = False
             while not success:
+                indiv._t_pos_set_a0 = []
+                indiv._t_pos_set_a1 = []
+                indiv._t_pos_estimate_a0 = []
+                indiv._t_pos_estimate_a1 = []
+                indiv._t_Iq_set_a0 = []
+                indiv._t_Iq_set_a1 = []
+
                 lp0 = traj[0][0]
                 lp1 = traj[0][1]
                 odrv.axis0.controller.input_pos = lp0

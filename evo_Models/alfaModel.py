@@ -97,7 +97,7 @@ class evo_Model:
             ML_model=indiv._outer.ML_model
             robo_sleep(.3-indiv._outer.STATIC_TEST_TIME)
 
-            indiv._outer.run_ML_model_traj(ML_model, indiv._outer.traj)
+            indiv._outer.run_ML_model_traj(ML_model)
             indiv._t_pos_set_a0 = indiv._outer._ML_pos_set_a0
             indiv._t_pos_set_a1 = indiv._outer._ML_pos_set_a1
             indiv._t_pos_estimate_a0 = indiv._outer._ML_pos_estimate_a0
@@ -426,10 +426,12 @@ class evo_Model:
         # self.configure_delay = timetest.get_configure_delay(self.odrv, samples)
         return (self.input_delay+self.data_delay)*1000
 
-    def run_ML_model_traj(self, ML_model, traj):
+    def run_ML_model_traj(self, ML_model):
         self.ML_model = ML_model
-        tot_time = self.T_INPUT*len(traj)
+        traj = indiv._outer.traj
         odrv = self.odrv
+        midpoints = indiv._outer.midpoints
+        tot_time = self.T_INPUT*len(traj)
         success = False
 
         while not success:
@@ -449,28 +451,31 @@ class evo_Model:
             odrv.axis1.controller.input_pos = lp1
             robo_sleep(self.T_INPUT-self.input_delay)
 
-            start = delay_start = time.perf_counter()
+            start = mid_delay_start = time.perf_counter()
             for p in traj:
-                self._ML_pos_set_a0.append(lp0)
-                self._ML_pos_set_a1.append(lp1)
-                self._ML_pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
-                self._ML_pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
-                self._ML_Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
-                self._ML_Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
-                self._ML_pos_error_a0.append(self._ML_pos_set_a0[-1]-self._ML_pos_estimate_a0[-1])
-                self._ML_pos_error_a1.append(self._ML_pos_set_a1[-1]-self._ML_pos_estimate_a1[-1])
-                ref_counter += 1
+                for i in range(1, midpoints+1):
+                    if i != 1:
+                        mid_delay_start = time.perf_counter()
+                    self._ML_pos_set_a0.append((p[0]-lp0)/midpoints*i+lp0)
+                    self._ML_pos_set_a1.append((p[1]-lp1)/midpoints*i+lp1)
+                    self._ML_pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
+                    self._ML_pos_estimate_a1.append(odrv.axis1.encoder.pos_estimate)
+                    self._ML_Iq_set_a0.append(odrv.axis0.motor.current_control.Iq_setpoint)
+                    self._ML_Iq_set_a1.append(odrv.axis1.motor.current_control.Iq_setpoint)
+                    self._ML_pos_error_a0.append(self._ML_pos_set_a0[-1]-self._ML_pos_estimate_a0[-1])
+                    self._ML_pos_error_a1.append(self._ML_pos_set_a1[-1]-self._ML_pos_estimate_a1[-1])
+                    ref_counter += 1
 
-                if ref_counter % self.update_interval == 0:
-                    self.do_model_predict()
-                    delay_end = time.perf_counter()
-                    robo_sleep(self.T_INPUT - (delay_end-delay_start)*self.ML_adjust)
+                    if ref_counter % self.update_interval == 0:
+                        self.do_model_predict()
+                        mid_delay_end = time.perf_counter()
+                        robo_sleep(self.T_INPUT - (mid_delay_end-mid_delay_start)*self.ML_adjust)
 
-                else:
-                    delay_end = time.perf_counter()
-                    robo_sleep(self.T_INPUT - (delay_end-delay_start)*self.ML_adjust)
+                    else:
+                        mid_delay_end = time.perf_counter()
+                        robo_sleep(self.T_INPUT - (mid_delay_end-mid_delay_start)*self.delay_adjust)
 
-                delay_start = time.perf_counter() ######
+                mid_delay_start = time.perf_counter() ######
 
                 odrv.axis0.controller.input_pos = lp0 = p[0]
                 odrv.axis1.controller.input_pos = lp1 = p[1]
