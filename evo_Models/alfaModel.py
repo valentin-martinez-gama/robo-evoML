@@ -42,7 +42,7 @@ class evo_Model:
     input_delay = .0015
     ML_input_delay = .0035
     delay_adjust = .75
-    ML_adjust = 1.05
+    ML_adjust = 2.25 #1.05
     # SAMPLING AND TRAJECTORY
     T_INPUT = .02  # SECONDSW
     traj = []
@@ -93,10 +93,11 @@ class evo_Model:
             indiv.score = te0+te1+se0+se1
             indiv.build_data()
 
-        def get_ML_errors_data(indiv, ML_model):
+        def get_ML_errors_data(indiv):
+            ML_model=indiv._outer.ML_model
             robo_sleep(.3-indiv._outer.STATIC_TEST_TIME)
 
-            indiv.outer.run_ML_model_traj(ML_model, indiv._outer.traj)
+            indiv._outer.run_ML_model_traj(ML_model, indiv._outer.traj)
             indiv._t_pos_set_a0 = indiv._outer._ML_pos_set_a0
             indiv._t_pos_set_a1 = indiv._outer._ML_pos_set_a1
             indiv._t_pos_estimate_a0 = indiv._outer._ML_pos_estimate_a0
@@ -461,30 +462,20 @@ class evo_Model:
                 ref_counter += 1
 
                 if ref_counter % self.update_interval == 0:
-                    #delay_start = time.perf_counter()
-
                     self.do_model_predict()
-
                     delay_end = time.perf_counter()
                     robo_sleep(self.T_INPUT - (delay_end-delay_start)*self.ML_adjust)
-                    '''
-                    robo_sleep(self.T_INPUT
-                               - (self.input_delay+self.data_delay) * self.delay_adjust
-                               - (delay_end-delay_start)*1.25) '''
+
                 else:
                     delay_end = time.perf_counter()
                     robo_sleep(self.T_INPUT - (delay_end-delay_start)*self.ML_adjust)
-                    '''
-                    robo_sleep(self.T_INPUT
-                               - (self.input_delay+self.data_delay) * self.delay_adjust)
-                               '''
 
                 delay_start = time.perf_counter() ######
 
                 odrv.axis0.controller.input_pos = lp0 = p[0]
                 odrv.axis1.controller.input_pos = lp1 = p[1]
-                end = time.perf_counter()
 
+            end = time.perf_counter()
             exec_time = end-start
             if abs(exec_time-tot_time) < tot_time*self.EXEC_TOLERANCE:
                 success = True

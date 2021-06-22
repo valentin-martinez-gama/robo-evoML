@@ -49,7 +49,6 @@ class beta_Model(evo_Model):
             midpoints = indiv._outer.midpoints
             tot_time = indiv._outer.T_INPUT*len(traj)
             success = False
-
             while not success:
                 lp0 = traj[0][0]
                 lp1 = traj[0][1]

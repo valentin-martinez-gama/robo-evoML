@@ -38,9 +38,9 @@ Plataforma de entrenamiento para red neuronal a partir de evolución diferencial
 '''
 
 
-def generate_results(odrv, evo_gains, traj_file, results_tag='results'):
+def generate_results(odrv, evo_gains, ML_file, traj_file, results_tag='results'):
     trap_move_to_start(odrv, [.65, .65])
-    robo.start(odrv, time_error=False)
+
 
     traj_dir = 'Trajectories/'
     traj_list = []
@@ -49,6 +49,7 @@ def generate_results(odrv, evo_gains, traj_file, results_tag='results'):
             traj_list.append(json.loads(traj))
 
     obj = evo_default(odrv, results_tag+'_RAND')
+    ML_model = load_net(ML_file)
 
     for t in traj_list:
         s_p0 = t['Trajectory'][0][0]
@@ -57,11 +58,12 @@ def generate_results(odrv, evo_gains, traj_file, results_tag='results'):
         trap_move_to_start(odrv, [s_p0, s_p1])
         robo_sleep(.2)
 
-        obj.traj = traj_list[0]
+        obj.traj = t['Trajectory']
 
         print("RANDOM INDIV *********")
         axis = [0, 1]
-        kp = [r_uni(self.K_RANGE[0], self.K_RANGE[1]) for m in axis]
+        k_limits = obj.k_limits
+        kp = [r_uni(obj.K_RANGE[0], obj.K_RANGE[1]) for m in axis]
         kv = [r_uni(k_limits[1][0](kp[m]), k_limits[1][1](kp[m])) for m in axis]
         kvi = [r_uni(k_limits[2][0], k_limits[2][1](kp[m], kv[m])) for m in axis]
         rand_indiv = [obj.Individual(111,
@@ -79,22 +81,23 @@ def generate_results(odrv, evo_gains, traj_file, results_tag='results'):
 
         print("ML GAINS INDIV **********")
         original_function = obj.Individual.get_training_errors_data
+        obj.ML_model = ML_model
         obj.Individual.get_training_errors_data = obj.Individual.get_ML_errors_data
         ML_indiv = [obj.Individual(333,
                                    obj.check_gains(evo_gains[0]),
                                    obj.check_gains(evo_gains[1]),
                                    obj.outer)]
-        obj.print_results(evo_indiv)
+        obj.print_results(ML_indiv)
         obj.Individual.get_training_errors_data = original_function
 
         combined_results = [rand_indiv, evo_indiv, ML_indiv]
 
         max_score = 99999
         for r in combined_results:
-            if r.score < max_score:
+            if r[0].score < max_score:
                 winner = r
 
-        obj.print_group(combined_results)
+        obj.print_group([r[0] for r in combined_results])
         obj.save_ML_data([c.export_dict for c in combined_results], winner.export_dict())
 
     return combined_results
