@@ -34,7 +34,7 @@ class evo_Model:
         self.am = 'AlphaAF'
     plot = False
     # EXECUTION TIME TOLERANCES
-    update_interval = 10
+    update_interval = 40
     EXEC_TOLERANCE = 10/100
     RESET_DELAYS = 6
     SAMPLES_ERROR_TEST = 50
@@ -42,7 +42,7 @@ class evo_Model:
     input_delay = .0015
     ML_input_delay = .0035
     delay_adjust = .75
-    ML_adjust = 2.25 #1.05
+    ML_adjust = 5#2.25 #1.05
     # SAMPLING AND TRAJECTORY
     T_INPUT = .02  # SECONDSW
     traj = []
@@ -428,9 +428,9 @@ class evo_Model:
 
     def run_ML_model_traj(self, ML_model):
         self.ML_model = ML_model
-        traj = indiv._outer.traj
+        traj = self.traj
         odrv = self.odrv
-        midpoints = indiv._outer.midpoints
+        midpoints = self.midpoints
         tot_time = self.T_INPUT*len(traj)
         success = False
 
@@ -469,11 +469,11 @@ class evo_Model:
                     if ref_counter % self.update_interval == 0:
                         self.do_model_predict()
                         mid_delay_end = time.perf_counter()
-                        robo_sleep(self.T_INPUT - (mid_delay_end-mid_delay_start)*self.ML_adjust)
+                        robo_sleep(self.T_INPUT/self.midpoints - (mid_delay_end-mid_delay_start)*self.ML_adjust)
 
                     else:
                         mid_delay_end = time.perf_counter()
-                        robo_sleep(self.T_INPUT - (mid_delay_end-mid_delay_start)*self.delay_adjust)
+                        robo_sleep(self.T_INPUT/self.midpoints - (mid_delay_end-mid_delay_start)*self.delay_adjust*3)
 
                 mid_delay_start = time.perf_counter() ######
 

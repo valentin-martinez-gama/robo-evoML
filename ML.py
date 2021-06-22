@@ -95,7 +95,7 @@ def generate_results(odrv, evo_gains, ML_file, traj_file, results_tag='results')
         max_score = 99999
         for r in combined_results:
             if r[0].score < max_score:
-                winner = r
+                winner = r[0]
 
         obj.print_group([r[0] for r in combined_results])
         obj.save_ML_data([c.export_dict for c in combined_results], winner.export_dict())
