@@ -21,7 +21,6 @@ class greek_Model:
         self.training_tag = training_tag
         self.midpoints = 4
         ML.robo.start(odrv, time_error=False)
-        self.update_time_errors()
         self.I_am()
         self.outer = self
 
@@ -30,15 +29,11 @@ class greek_Model:
         self.am = 'A greek motherfucker'
     plot = False
     # EXECUTION TIME TOLERANCES
-    update_interval = 10
-    EXEC_TOLERANCE = 10/100
+    update_interval = 20
+    EXEC_TOLERANCE = 20/100 #10/100
     RESET_DELAYS = 4
     SAMPLES_ERROR_TEST = 30
     tolerance_fails = 0
-    input_delay = .0015
-    ML_input_delay = .0035
-    delay_adjust = .75
-    ML_adjust = 2.25 #1.05
     # SAMPLING AND TRAJECTORY
     T_INPUT = .02  # SECONDSW
     traj = []
@@ -160,7 +155,7 @@ class greek_Model:
             s_now = time.perf_counter()
 
             for i in range(round(indiv._outer.STATIC_TEST_TIME/(indiv._outer.T_INPUT/indiv._outer.midpoints))):
-                while ((s_now-start) // (self.T_INPUT/midpoints)) < i:
+                while ((s_now-start) // (indiv._outer.T_INPUT/indiv._outer.midpoints)) < i:
                     s_now = time.perf_counter()
 
                 indiv._s_pos_set_a0.append(pset_0)
@@ -193,15 +188,16 @@ class greek_Model:
                 p_count = 0
 
                 for p in traj:
-                    while ((p_now-start) // self.T_INPUT) < p_count:
+                    while ((p_now-start) // indiv._outer.T_INPUT) < p_count:
                         p_now = time.perf_counter()
                     p_count += 1
 
                     odrv.axis0.controller.input_pos = p[0]
                     odrv.axis1.controller.input_pos = p[1]
 
+                    m_now = time.perf_counter()
                     for i in range(1, midpoints+1):
-                        while ((m_now-start) // (self.T_INPUT/midpoints)) < p_count*midpoints+i:
+                        while ((m_now-start) // (indiv._outer.T_INPUT/midpoints)) < p_count*midpoints+i:
                             m_now = time.perf_counter()
 
                         indiv._t_pos_estimate_a0.append(odrv.axis0.encoder.pos_estimate)
@@ -221,7 +217,6 @@ class greek_Model:
                     success = True
                 else:
                     print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
-                    indiv._outer.correct_delay_error(lp0, lp1)
 
         def build_data(indiv):
             indiv.traj_data = {
@@ -247,15 +242,6 @@ class greek_Model:
                 if item.startswith('_'):
                     del data[item]
             return data
-
-    def correct_delay_error(self, t0, t1):
-        self.tolerance_fails += 1
-        if self.tolerance_fails >= self.RESET_DELAYS:
-            self.update_time_errors()
-            self.odrv.axis0.controller.input_pos = t0
-            self.odrv.axis1.controller.input_pos = t1
-            time.sleep(.2)
-            self.tolerance_fails = 0
 
     def save_ML_data(self, historic_gen_list, winner):
         now = time.localtime()
@@ -442,7 +428,7 @@ class greek_Model:
 
     def run_ML_model_traj(self, ML_model):
         self.ML_model = ML_model
-        self.ML_model.predict([0]*40)
+        self.ML_model.predict(np.matrix([0 for i in range(40)]))
         traj = self.traj
         odrv = self.odrv
         midpoints = self.midpoints
@@ -477,6 +463,7 @@ class greek_Model:
 
                 odrv.axis0.controller.input_pos = p[0]
                 odrv.axis1.controller.input_pos = p[1]
+                m_now = time.perf_counter()
 
                 for i in range(1, midpoints+1):
                     while ((m_now-start) // (self.T_INPUT/midpoints)) < p_count*midpoints+i:
@@ -503,7 +490,6 @@ class greek_Model:
                 success = True
             else:
                 print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
-                self.correct_delay_error(lp0, lp1)
 
     def do_model_predict(self):
         self.X_val = np.matrix([self._ML_pos_error_a0[-10:]

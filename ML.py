@@ -10,7 +10,7 @@ import keras
 
 from Odrive_control import configure, robo
 from Odrive_control.timetest import robo_sleep
-from evo_Models.gammaModel import gamma_Model as evo_default
+from evo_Models.greekModel import greek_Model as evo_default
 
 from odrive.enums import *
 '''
@@ -98,8 +98,8 @@ def generate_results(odrv, evo_gains, ML_file, traj_file, results_tag='results')
                 winner = r[0]
 
         obj.print_group([r[0] for r in combined_results])
-        obj.save_ML_data([c.export_dict for c in combined_results], winner.export_dict())
-
+        obj.save_ML_data([c[0].export_dict for c in combined_results], winner.export_dict())
+    print(obj.am)
     return combined_results
 
 
