@@ -29,9 +29,9 @@ class greek_Model:
         self.am = 'A greek motherfucker'
     plot = False
     # EXECUTION TIME TOLERANCES
-    update_interval = 20
+    update_interval = 13
     EXEC_TOLERANCE = 20/100 #10/100
-    RESET_DELAYS = 4
+    RESET_DELAYS = 3
     SAMPLES_ERROR_TEST = 30
     tolerance_fails = 0
     # SAMPLING AND TRAJECTORY
@@ -40,21 +40,20 @@ class greek_Model:
     # VIBRATION TEST TOLERANCES ++ = MORE FLEXIBILITY
     STATIC_TEST_TIME = .25
     # EVOLUTONARY PARAMETERS
-    MAX_GENERATIONS = 5
+    MAX_GENERATIONS = 8
     INF_CYCLE = False
     population = []
     plot_group = []
-    POP_SIZE = 8
-    ELITES = 1
-    SURVIVORS = 3
-    MUTTS = 5
-    MUTT_RATE = .15
+    POP_SIZE = 16
+    ELITES = 3
+    SURVIVORS = 8
+    MUTTS = 9
+    MUTT_RATE = .2
     # SAFETY LIMITS
-    K_RANGE = (20, 60)
+    K_RANGE = (40, 90)
     k_limits = ((K_RANGE[0], K_RANGE[1]),
-                (lambda kp: .052+.00020*kp, lambda kp: .48-.005*kp),
-                (0, lambda kp, kv: (8+(kv/.052+.00020*kp)*3)*kv))
-    # lambda kp:.48-.005*kp
+                (lambda kp: .052+.00020*kp, lambda kp: .48*1.2-.005*kp),
+                (0, lambda kp, kv: 1.25-.0075*kp + kv*6))
 
     def check_gains(self, proposed):
         prop_kp, prop_kv, prop_kv_int = proposed
@@ -136,13 +135,13 @@ class greek_Model:
 
         def calc_error(indiv):
             traj_error_a0 = sum(
-                np.abs(np.subtract(indiv._t_pos_set_a0, indiv._t_pos_estimate_a0)))
+                np.square(np.subtract(indiv._t_pos_set_a0, indiv._t_pos_estimate_a0)))
             traj_error_a1 = sum(
-                np.abs(np.subtract(indiv._t_pos_set_a1, indiv._t_pos_estimate_a1)))
+                np.square(np.subtract(indiv._t_pos_set_a1, indiv._t_pos_estimate_a1)))
             stat_error_a0 = sum(
-                np.abs(np.subtract(indiv._s_pos_set_a0, indiv._s_pos_estimate_a0)))
+                np.square(np.subtract(indiv._s_pos_set_a0, indiv._s_pos_estimate_a0)))
             stat_error_a1 = sum(
-                np.abs(np.subtract(indiv._s_pos_set_a1, indiv._s_pos_estimate_a1)))
+                np.square(np.subtract(indiv._s_pos_set_a1, indiv._s_pos_estimate_a1)))
             return (traj_error_a0, traj_error_a1, stat_error_a0, stat_error_a1)
 
         def static_test(indiv):
@@ -417,7 +416,7 @@ class greek_Model:
             i0 = indiv.traj_data['pos_set_a0']+indiv.stat_data['pos_set_a0']
             i1 = indiv.traj_data['pos_set_a1']+indiv.stat_data['pos_set_a1']
             inputss.extend(i0 + i1)
-            errorss.extend(list(np.multiply(15, np.abs(np.subtract(np.array(i0+i1), np.array(e0+e1))))))
+            errorss.extend(list(np.multiply(1, np.abs(np.subtract(np.array(i0+i1), np.array(e0+e1))))))
         plt.plot(time_axis, estimatess)
         plt.plot(time_axis, inputss)
         plt.plot(time_axis, errorss)
@@ -479,17 +478,22 @@ class greek_Model:
                     self._ML_pos_error_a1.append(self._ML_pos_set_a1[-1]-self._ML_pos_estimate_a1[-1])
                     ref_counter += 1
                     if ref_counter % self.update_interval == 0:
+                        #start=time.perf_counter()
                         self.do_model_predict()
+                        #end=time.perf_counter()
+                        #print('Tiempo de predicción')
+                        #print(end-start)
 
                 lp0 = p[0]
                 lp1 = p[1]
 
-            end = time.perf_counter()
-            exec_time = end-start
-            if abs(exec_time-tot_time) < tot_time*self.EXEC_TOLERANCE:
-                success = True
-            else:
-                print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
+            #end = time.perf_counter()
+            #exec_time = end-start
+
+            #if abs(exec_time-tot_time) < tot_time*self.EXEC_TOLERANCE:
+            success = True
+            #else:
+            #    print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
 
     def do_model_predict(self):
         self.X_val = np.matrix([self._ML_pos_error_a0[-10:]
@@ -497,7 +501,7 @@ class greek_Model:
                                 + self._ML_Iq_set_a0[-10:]
                                 + self._ML_Iq_set_a1[-10:]])
 
-        self.results = self.ML_model.predict(self.X_val)
+        self.results = self.ML_model(self.X_val, training=False)
         predicted_A0_gains = [self.results[0][0], self.results[0][1]/100, self.results[0][2]/10]
         predicted_A1_gains = [self.results[0][3], self.results[0][4]/100, self.results[0][5]/10]
         configure.independent_gains(self.odrv, predicted_A0_gains, predicted_A1_gains)

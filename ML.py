@@ -96,9 +96,9 @@ def generate_results(odrv, evo_gains, ML_file, traj_file, results_tag='results')
         for r in combined_results:
             if r[0].score < max_score:
                 winner = r[0]
-
+        obj.traj_name=t['Tag']
         obj.print_group([r[0] for r in combined_results])
-        obj.save_ML_data([c[0].export_dict for c in combined_results], winner.export_dict())
+        obj.save_ML_data([c[0].export_dict() for c in combined_results], winner.export_dict())
     print(obj.am)
     return combined_results
 
@@ -261,7 +261,7 @@ def ML_print_indiv_group_trajs(chosen):
         estimatess.extend(e)
         i = indiv.traj_data['pos_set_a1']+indiv.stat_data['pos_set_a1']
         inputss.extend(i)
-        errorss.extend(list(np.multiply(15, np.abs(np.subtract(np.array(i), np.array(e))))))
+        errorss.extend(list(np.multiply(1, np.abs(np.subtract(np.array(i), np.array(e))))))
     plt.plot(time_axis, estimatess)
     plt.plot(time_axis, inputss)
     plt.plot(time_axis, errorss)

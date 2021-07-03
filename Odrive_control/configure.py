@@ -64,8 +64,8 @@ def independent_gains(odrv, gains_A0=[20, .16, .32], gains_A1=[20, .16, .32]):
     odrv.axis1.controller.config.pos_gain = gains_A1[0]  # [(turns/s) / turns]
     odrv.axis1.controller.config.vel_gain = gains_A1[1]  # [Nm/(turns/s)]
     odrv.axis1.controller.config.vel_integrator_gain = gains_A1[2]  # [Nm/((turns/s) * s)]
-    return print("NEW independent gains --> Kp: {}, {} Kpv: {}, {} Kiv: {}, {}".format(
-        gains_A0[0], gains_A1[0], gains_A0[1], gains_A1[1], gains_A0[2], gains_A1[2]))
+    #return print("NEW independent gains --> Kp: {}, {} Kpv: {}, {} Kiv: {}, {}".format(
+        #gains_A0[0], gains_A1[0], gains_A0[1], gains_A1[1], gains_A0[2], gains_A1[2]))
 
 
 def trap_traj(odrv, vel_lim=1, accel_lim=8):
