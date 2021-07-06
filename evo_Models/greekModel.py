@@ -135,13 +135,13 @@ class greek_Model:
 
         def calc_error(indiv):
             traj_error_a0 = sum(
-                np.square(np.subtract(indiv._t_pos_set_a0, indiv._t_pos_estimate_a0)))
+                np.abs(np.subtract(indiv._t_pos_set_a0, indiv._t_pos_estimate_a0)))
             traj_error_a1 = sum(
-                np.square(np.subtract(indiv._t_pos_set_a1, indiv._t_pos_estimate_a1)))
+                np.abs(np.subtract(indiv._t_pos_set_a1, indiv._t_pos_estimate_a1)))
             stat_error_a0 = sum(
-                np.square(np.subtract(indiv._s_pos_set_a0, indiv._s_pos_estimate_a0)))
+                np.abs(np.subtract(indiv._s_pos_set_a0, indiv._s_pos_estimate_a0)))
             stat_error_a1 = sum(
-                np.square(np.subtract(indiv._s_pos_set_a1, indiv._s_pos_estimate_a1)))
+                np.abs(np.subtract(indiv._s_pos_set_a1, indiv._s_pos_estimate_a1)))
             return (traj_error_a0, traj_error_a1, stat_error_a0, stat_error_a1)
 
         def static_test(indiv):

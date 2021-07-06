@@ -48,7 +48,7 @@ def generate_results(odrv, evo_gains, ML_file, traj_file, results_tag='results')
         for traj in t_file:
             traj_list.append(json.loads(traj))
 
-    obj = evo_default(odrv, results_tag+'_RAND')
+    obj = evo_default(odrv, results_tag+'_RES')
     ML_model = load_net(ML_file)
 
     for t in traj_list:
@@ -98,46 +98,48 @@ def generate_results(odrv, evo_gains, ML_file, traj_file, results_tag='results')
                 winner = r[0]
         obj.traj_name=t['Tag']
         obj.print_group([r[0] for r in combined_results])
-        obj.save_ML_data([[c[0].export_dict()] for c in combined_results], winner.export_dict())
+        obj.save_ML_data([c[0].export_dict() for c in combined_results], winner.export_dict())
     print(obj.am)
     return combined_results
-
-def RAND_debugger(copy):
-    data_dir = 'Datasets/'
-    in_file = copy + '.json'
-    out_file = copy + '.csv'
-    with open(data_dir+in_file, 'r') as json_file:
-        n=0
-        for test in json_file:
-            #test_format = ''.join([i for i in test]) #if not (i.isdigit() or i in ('.','-',' '))])
-            test_format = build_json_string(test)
-            print(n)
-            n+=1
-    return test_format
 
 def organize_results(result_tag):
     data_dir = 'Datasets/'
     in_file = result_tag + '.json'
     out_file = result_tag + '.csv'
+    code = {111:'RANDOM', 222:'EVO', 333:'ML'}
+    with open(data_dir+in_file, 'r') as json_file, open(data_dir+out_file, 'w', newline='') as res_file:
+        res_write = csv.writer(res_file)
+        for line in json_file:
+            data = json.loads(line)
+            res_write.writerow([data['winner']['generation'], 'runID=',data['runID'], 'Trajectory',data['traj']])
+            for m in data['runs_data']:
+                res_write.writerow([code[m['generation']], m['score']])
+                res_write.writerow(['Gains'])
+                res_write.writerow(list(m['gains'].keys()))
+                res_write.writerow(list(m['gains'].values()))
+                res_write.writerow(['Calculated errors'])
+                res_write.writerow(['Total Error', 'AO Error', 'A1 Error']+list(m['errors'].keys()))
+                res_write.writerow([sum(list(m['errors'].values())),
+                                    m['errors']['traj_error_a0']+m['errors']['stat_error_a0'],
+                                    m['errors']['traj_error_a1']+m['errors']['stat_error_a1']]
+                                    + list(m['errors'].values()))
+                res_write.writerow(['Pos Set A0 - A1'])
+                pos_set_a0 = m['traj_data']['pos_set_a0'] + m['stat_data']['pos_set_a0']
+                pos_set_a1 = m['traj_data']['pos_set_a1'] + m['stat_data']['pos_set_a1']
+                res_write.writerows([pos_set_a0,pos_set_a1])
+                res_write.writerow(['Pos Estimates A0 - A1'])
+                pos_estimate_a0 = m['traj_data']['pos_estimate_a0'] + m['stat_data']['pos_estimate_a0']
+                pos_estimate_a1 = m['traj_data']['pos_estimate_a1'] + m['stat_data']['pos_estimate_a1']
+                res_write.writerows([pos_estimate_a0,pos_estimate_a1])
+                res_write.writerow(['Errors A0 - A1'])
+                res_write.writerows([np.abs(np.subtract(pos_set_a0,pos_estimate_a0)),
+                                     np.abs(np.subtract(pos_set_a1,pos_estimate_a1))])
+                res_write.writerow([''])
+            res_write.writerow(['---------'])
+            res_write.writerow([''])
+    return 1
 
-    with open(data_dir+in_file, 'r') as json_file:
-        for test in json_file:
-            data_string = build_json_string(test)
-            #data = json.loads(data_string)
-            #print(data['runID'])
-    return data_string
 
-def build_json_string(line):
-    return ''.join([c for c in line])
-    '''
-    newData = {
-        "runID": int(str(now.tm_year) + str(now.tm_mon) + str(now.tm_mday)
-                     + str(now.tm_hour) + str(now.tm_min)),
-        "winner": winner,
-        "traj": self.traj_name,
-        "runs_data": historic_gen_list
-    }
-    '''
 def traj_training(odrv, evo_model,
                   num_evos=5, traj_file='all_trajs.json'):
 
