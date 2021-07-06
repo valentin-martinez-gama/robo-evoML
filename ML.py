@@ -98,11 +98,46 @@ def generate_results(odrv, evo_gains, ML_file, traj_file, results_tag='results')
                 winner = r[0]
         obj.traj_name=t['Tag']
         obj.print_group([r[0] for r in combined_results])
-        obj.save_ML_data([c[0].export_dict() for c in combined_results], winner.export_dict())
+        obj.save_ML_data([[c[0].export_dict()] for c in combined_results], winner.export_dict())
     print(obj.am)
     return combined_results
 
+def RAND_debugger(copy):
+    data_dir = 'Datasets/'
+    in_file = copy + '.json'
+    out_file = copy + '.csv'
+    with open(data_dir+in_file, 'r') as json_file:
+        n=0
+        for test in json_file:
+            #test_format = ''.join([i for i in test]) #if not (i.isdigit() or i in ('.','-',' '))])
+            test_format = build_json_string(test)
+            print(n)
+            n+=1
+    return test_format
 
+def organize_results(result_tag):
+    data_dir = 'Datasets/'
+    in_file = result_tag + '.json'
+    out_file = result_tag + '.csv'
+
+    with open(data_dir+in_file, 'r') as json_file:
+        for test in json_file:
+            data_string = build_json_string(test)
+            #data = json.loads(data_string)
+            #print(data['runID'])
+    return data_string
+
+def build_json_string(line):
+    return ''.join([c for c in line])
+    '''
+    newData = {
+        "runID": int(str(now.tm_year) + str(now.tm_mon) + str(now.tm_mday)
+                     + str(now.tm_hour) + str(now.tm_min)),
+        "winner": winner,
+        "traj": self.traj_name,
+        "runs_data": historic_gen_list
+    }
+    '''
 def traj_training(odrv, evo_model,
                   num_evos=5, traj_file='all_trajs.json'):
 
