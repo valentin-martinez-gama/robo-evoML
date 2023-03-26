@@ -4,7 +4,7 @@ Use ML to mimic optimization through evolutionary algorithm on 5 bar parallel ro
 The following are the main components of the codebase:
 
 - Logic and control functions for the control loop implementation using Odriver under the Odrive_control folder
-- The evolutonary algorithm logic and it’s implementation on top of the ODrive controller are contained in the evo_ML.py file
+- The differential evolution algorithm logic and it’s implementation on top of the ODrive controller are contained in the evo_ML.py file
 - The methodology used to generate data training set out of implementing multiple evolutionary iterations on multiple trajectories is in the ML_training.py file
 - ML.py and ML_data.py contain supporting initialization and data processsing functions.
 - The Trajecotries folder contains the trajectories to be followed as pairs of angular setpoints for the two motors. All of them to be uniformely spaced in time.
