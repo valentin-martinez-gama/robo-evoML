@@ -1,4 +1,5 @@
 import time
+from .configure import gains
 
 
 def robo_sleep(duration, get_now=time.perf_counter):
@@ -74,6 +75,23 @@ def get_input_pos_delay(odrv, iters=50):
     input_del = sum(delays)/len(delays)
     print("Average input_pos execution time is %0.5fms" % (input_del*1000))
     return input_del
+
+
+def get_configure_delay(odrv, samples):
+    delays = []
+    kp = odrv.axis0.controller.config.pos_gain
+    kv = odrv.axis0.controller.config.vel_gain
+    kvi = odrv.axis0.controller.config.vel_integrator_gain
+
+    for c in range(0, samples):
+        start = time.perf_counter()
+        gains(odrv, kp, kv, kvi)
+        end = time.perf_counter()
+        delays.append(end-start)
+        time.sleep(.01)
+
+    configure_delay = sum(delays)/len(delays)
+    return configure_delay
 
 
 def get_info_read_delay(odrv, iters=50):
