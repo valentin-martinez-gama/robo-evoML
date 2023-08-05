@@ -255,7 +255,7 @@ class greek_Model:
             json.dump(newData, lean_file)
             lean_file.write('\n')
 
-    def build_ML_training_set(self, group_size=10):
+    def build_ML_training_set(self, group_size=10, data_dir = 'Datasets/'):
         in_file = self.training_tag + '.json'
         out_file = self.training_tag + '.csv'
         error_cols = [
@@ -271,7 +271,7 @@ class greek_Model:
 
         master_ML_df = pd.DataFrame(columns=k_in_cols+error_cols+k_out_cols)
 
-        data_dir = 'Datasets/'
+
         with open(data_dir+in_file, 'r') as json_file:
             for evolution in json_file:
                 evo_df = pd.DataFrame(columns=error_cols+k_in_cols)

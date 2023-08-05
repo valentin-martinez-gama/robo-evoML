@@ -1,0 +1,14 @@
+jsonschema=2.6.0
+keras=2.4.3
+matplotlib=3.4.1
+numpy=1.19.5
+odrive=0.5.1.post0
+pandas=1.2.4
+parse=1.19.0
+scipy=1.6.2
+sympy=1.8
+tensorboard=2.5.0
+tensorboard-data-server=0.6.0
+tensorboard-plugin-wit=1.8.0
+tensorflow=2.5.0
+tensorflow-estimator=2.5.0rc0
