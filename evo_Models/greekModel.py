@@ -16,13 +16,17 @@ import ML
 class greek_Model:
     '''Basic object representation of evo Model - allows to tune models '''
 
-    def __init__(self, odrv, training_tag):
+    def __init__(self, odrv, training_tag, res_dir='Datasets/'):
         self.odrv = odrv
         self.training_tag = training_tag
+        self.res_dir=res_dir
+        
         self.midpoints = 4
-        ML.robo.start(odrv, time_error=False)
+        if odrv:
+            ML.robo.start(odrv, time_error=False)
         self.I_am()
         self.outer = self
+
 
     def I_am(self):
         print("I am Greek")
@@ -64,7 +68,7 @@ class greek_Model:
         return kp, kv, kv_int
 
     class Individual:
-        def __init__(indiv, generation, A0_gains, A1_gains, outer):
+        def __init__(indiv, generation, A0_gains, A1_gains, outer, dummy=False):
             indiv._outer = outer
             indiv.generation = generation
             indiv.gains = {
@@ -77,16 +81,18 @@ class greek_Model:
             }
             indiv._A0_gains = A0_gains
             indiv._A1_gains = A1_gains
-            configure.independent_gains(outer.odrv, A0_gains, A1_gains)
-            te0, te1, se0, se1 = indiv.get_training_errors_data()
-            indiv.errors = {
-                "traj_error_a0": te0,
-                "traj_error_a1": te1,
-                "stat_error_a0": se0,
-                "stat_error_a1": se1
-            }
-            indiv.score = te0+te1+se0+se1
-            indiv.build_data()
+
+            if not dummy:
+                configure.independent_gains(outer.odrv, A0_gains, A1_gains)
+                te0, te1, se0, se1 = indiv.get_training_errors_data()
+                indiv.errors = {
+                    "traj_error_a0": te0,
+                    "traj_error_a1": te1,
+                    "stat_error_a0": se0,
+                    "stat_error_a1": se1
+                }
+                indiv.score = te0+te1+se0+se1
+                indiv.build_data()
 
         def get_ML_errors_data(indiv):
             ML_model=indiv._outer.ML_model
@@ -255,7 +261,7 @@ class greek_Model:
             json.dump(newData, lean_file)
             lean_file.write('\n')
 
-    def build_ML_training_set(self, group_size=10, data_dir = 'Datasets/'):
+    def build_ML_training_set(self, group_size=10, data_dir='Datasets/'):
         in_file = self.training_tag + '.json'
         out_file = self.training_tag + '.csv'
         error_cols = [
@@ -300,7 +306,7 @@ class greek_Model:
                     evo_df['out_'+wg] = evo_data['winner']['gains'][wg]
                 master_ML_df = master_ML_df.append(evo_df)
 
-        master_ML_df.to_csv(data_dir+out_file, index=False)
+        master_ML_df.to_csv(self.res_dir+out_file, index=False)
 
     def evo_gains_ML(self, traj_array, traj_name='test'):
         self.traj_name = traj_name
@@ -423,7 +429,8 @@ class greek_Model:
         plt.xlabel("Muestreo")
         plt.ylabel("Posición")
         plt.legend(["Posición Actual", "Referencia", "Error"])
-        plt.show()
+        plt.savefig(self.res_dir+"Demo Trajectory execution plot.png")
+        plt.show(block=False)
 
     def run_ML_model_traj(self, ML_model):
         self.ML_model = ML_model
@@ -495,16 +502,30 @@ class greek_Model:
             #else:
             #    print("ERROR EN TIMEPO = " + str(exec_time-tot_time))
 
-    def do_model_predict(self):
-        self.X_val = np.matrix([self._ML_pos_error_a0[-10:]
-                                + self._ML_pos_error_a1[-10:]
-                                + self._ML_Iq_set_a0[-10:]
-                                + self._ML_Iq_set_a1[-10:]])
+    def do_model_predict(self, test_X_val=False):
 
-        self.results = self.ML_model(self.X_val, training=False)
+        if not test_X_val.any():
+            self.X_val = np.matrix([self._ML_pos_error_a0[-10:]
+                                    + self._ML_pos_error_a1[-10:]
+                                    + self._ML_Iq_set_a0[-10:]
+                                    + self._ML_Iq_set_a1[-10:]])
+
+        else:
+            self.X_val = test_X_val
+
+        self.results = self.ML_model(self.X_val, training=False).numpy()
         predicted_A0_gains = [self.results[0][0], self.results[0][1]/100, self.results[0][2]/10]
         predicted_A1_gains = [self.results[0][3], self.results[0][4]/100, self.results[0][5]/10]
-        configure.independent_gains(self.odrv, predicted_A0_gains, predicted_A1_gains)
+
+        if not test_X_val.any():
+            configure.independent_gains(self.odrv, predicted_A0_gains, predicted_A1_gains)
+        else:
+            with open(self.res_dir+"Demo NN Gains Prediction.txt", "w") as text_file:
+                text_file.write(f"Inputs : {self.X_val}\n")
+                text_file.write(f"Predicted_A0_gains : {predicted_A0_gains}\n")
+                text_file.write(f"Predicted_A1_gains : {predicted_A1_gains}\n")
+            return predicted_A0_gains, predicted_A1_gains
+
 
     def ML_model_exec_plot(self):
         time_axis = range(0, len(self._ML_pos_set_a0)*2)
